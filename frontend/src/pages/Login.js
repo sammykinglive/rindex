@@ -30,24 +30,23 @@ export default function Login() {
     <div className="login-page">
       <div className="login-left">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-          <div style={{ background: '#F0B429', borderRadius: 14, width: 64, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Wheat size={32} color="#0D2137" />
-          </div>
+          
+          
           <div className="login-brand">Rin<span>dex</span></div>
         </div>
-        <div className="login-tagline">Maize Inventory Management System</div>
-        <div style={{ marginTop: 40, color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
+        <div className="login-tagline">Inventory Management System</div>
+        <div style={{ marginTop: 10, color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
           Track every bag. Know every number.
         </div>
 
-        <div style={{ marginTop: 60, display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 320 }}>
+        <div style={{ marginTop: 40, display: 'flex', flexDirection: 'column', gap: 5, maxWidth: 320 }}>
           {[
-            ['📦', 'Real-time stock tracking'],
-            ['📊', 'Live P&L calculations'],
-            ['⚠️', 'Automatic reorder alerts'],
-            ['👥', 'Multi-user access control'],
+            ['', 'Real-time stock tracking'],
+            ['', 'Live P&L calculations'],
+            ['', 'Automatic reorder alerts'],
+            ['', 'Multi-user access control'],
           ].map(([icon, text]) => (
-            <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.75)', fontSize: 14 }}>
+            <div key={text} style={{ display: 'flex', alignItems: 'center',  gap: 12, color: 'rgba(255,255,255,0.75)', fontSize: 14 }}>
               <span style={{ fontSize: 20 }}>{icon}</span> {text}
             </div>
           ))}
@@ -107,14 +106,10 @@ export default function Login() {
             </button>
           </form>
 
-          <div style={{ marginTop: 24, padding: 14, background: 'var(--primary-pale)', borderRadius: 8, fontSize: 12.5, color: 'var(--text-muted)' }}>
-            <strong style={{ color: 'var(--primary)' }}>Default Admin Login</strong><br />
-            Email: admin@rindex.com<br />
-            Password: admin123<br />
-            <span style={{ color: 'var(--red)', fontWeight: 600 }}>Change this after your first login!</span>
-          </div>
+         
         </div>
       </div>
     </div>
   );
 }
+

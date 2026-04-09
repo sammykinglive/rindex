@@ -5,11 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'rindex-secret-key-2024';
 function authMiddleware(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access denied. No token provided.' });
-  }
-
+  if (!token) return res.status(401).json({ error: 'Access denied. No token provided.' });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
@@ -20,9 +16,7 @@ function authMiddleware(req, res, next) {
 }
 
 function adminOnly(req, res, next) {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required.' });
-  }
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required.' });
   next();
 }
 
