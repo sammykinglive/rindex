@@ -10,7 +10,7 @@ function PnLRow({ label, value, bold, color, bg, borderTop, indent }) {
   return (
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: indent ? '10px 20px 10px 36px' : '12px 20px',
+      padding: indent ? '14px 20px 14px 36px' : '16px 20px',
       borderTop: borderTop ? '2px solid var(--border)' : '1px solid var(--border)',
       background: bg || 'transparent',
     }}>
