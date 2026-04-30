@@ -2,22 +2,23 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Sidebar from './components/Sidebar';
-import Login    from './pages/Login';
+import Sidebar   from './components/Sidebar';
+import Login     from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Receipts  from './pages/Receipts';
 import Issues    from './pages/Issues';
 import Balance   from './pages/Balance';
+import Expenses  from './pages/Expenses';
 import PnL       from './pages/PnL';
 import Settings  from './pages/Settings';
 import Users     from './pages/Users';
 
-// Page titles for the topbar
 const TITLES = {
   '/':          '📊 Dashboard',
   '/receipts':  '📥 Stock Receipts',
   '/issues':    '📤 Stock Issues',
   '/balance':   '⚖️ Stock Balance',
+  '/expenses':  '💸 Expenses',
   '/pnl':       '💰 P&L Summary',
   '/settings':  '⚙️ Settings',
   '/users':     '👥 Manage Users',
@@ -35,7 +36,6 @@ function AppShell() {
   const { user } = useAuth();
   const path = window.location.pathname;
   const title = TITLES[path] || 'Rindex';
-
   if (!user) return null;
 
   return (
@@ -56,6 +56,7 @@ function AppShell() {
             <Route path="/receipts" element={<Receipts />} />
             <Route path="/issues"   element={<Issues />} />
             <Route path="/balance"  element={<Balance />} />
+            <Route path="/expenses" element={<Expenses />} />
             <Route path="/pnl"      element={<PnL />} />
             <Route path="/settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />
             <Route path="/users"    element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
