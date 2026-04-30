@@ -1,134 +1,327 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Package, TrendingUp, TrendingDown, Scale, AlertTriangle, CheckCircle, Warehouse, DollarSign } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import {
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, CartesianGrid, Legend
+} from 'recharts';
+import {
+  Package, TrendingUp, TrendingDown, Scale,
+  AlertTriangle, CheckCircle, Warehouse, DollarSign,
+  ArrowUpRight, ArrowDownRight, RefreshCw
+} from 'lucide-react';
 import api from '../utils/api';
 import { fmt, MONTHS } from '../utils/format';
 
-function KpiCard({ label, value, sub, color, icon: Icon }) {
+/* ── Custom Tooltip ─────────────────────────────────────────── */
+function ChartTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
   return (
-    <div className={`kpi-card ${color}`}>
-      <div className="kpi-label">{label}</div>
-      <div className={`kpi-value ${color}`}>{value}</div>
-      {sub && <div className="kpi-sub">{sub}</div>}
-      <div className="kpi-icon">{Icon && <Icon size={48} strokeWidth={1} />}</div>
+    <div style={{
+      background: '#fff', border: '1px solid var(--border)',
+      borderRadius: 10, padding: '10px 14px',
+      boxShadow: 'var(--shadow)', fontSize: 13
+    }}>
+      <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>{label}</div>
+      {payload.map(p => (
+        <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, display: 'inline-block' }} />
+          <span style={{ color: 'var(--text-muted)' }}>{p.name}:</span>
+          <span style={{ fontWeight: 700, color: 'var(--text)' }}>{fmt.number(p.value)} bags</span>
+        </div>
+      ))}
     </div>
   );
 }
 
-export default function Dashboard() {
-  const [data, setData]     = useState(null);
-  const [loading, setLoading] = useState(true);
+function PnLTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: '#fff', border: '1px solid var(--border)',
+      borderRadius: 10, padding: '10px 14px',
+      boxShadow: 'var(--shadow)', fontSize: 13
+    }}>
+      <div style={{ fontWeight: 700, marginBottom: 6 }}>{label}</div>
+      {payload.map(p => (
+        <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, display: 'inline-block' }} />
+          <span style={{ color: 'var(--text-muted)' }}>{p.name}:</span>
+          <span style={{ fontWeight: 700 }}>{fmt.currency(p.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  useEffect(() => {
-    api.get('/dashboard').then(r => { setData(r.data); setLoading(false); });
-  }, []);
+/* ── KPI Card ───────────────────────────────────────────────── */
+function KpiCard({ label, value, sub, iconBg, icon: Icon, trend, trendLabel, onClick }) {
+  return (
+    <div className="kpi-card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div className="kpi-icon-wrap" style={{ background: iconBg + '20' }}>
+          <Icon size={20} color={iconBg} strokeWidth={2.5} />
+        </div>
+        {trend !== undefined && (
+          <span className={`change-chip ${trend >= 0 ? 'up' : 'down'}`}>
+            {trend >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+            {Math.abs(trend).toFixed(1)}%
+          </span>
+        )}
+      </div>
+      <div className="kpi-label" style={{ marginTop: 4 }}>{label}</div>
+      <div className={`kpi-value ${String(value).length > 10 ? 'sm' : ''}`}>{value}</div>
+      {sub && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{sub}</div>}
+      {trendLabel && (
+        <div style={{ fontSize: 11.5, color: 'var(--text-light)', marginTop: 6 }}>{trendLabel}</div>
+      )}
+    </div>
+  );
+}
+
+/* ── Main Dashboard ─────────────────────────────────────────── */
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  function load(silent = false) {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    api.get('/dashboard').then(r => {
+      setData(r.data);
+      setLoading(false);
+      setRefreshing(false);
+    });
+  }
+
+  useEffect(() => { load(); }, []);
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
-      <span className="spin" style={{ fontSize: 32 }}>⟳</span>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 16 }}>
+      <div style={{ width: 44, height: 44, border: '3px solid var(--primary-pale)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>Loading dashboard…</span>
     </div>
   );
 
   const { kpis, monthly, recent_activity, settings } = data;
-  const chartData = monthly.map((m, i) => ({ name: MONTHS[i], 'Bags In': m.bags_in, 'Bags Out': m.bags_out }));
+
+  // Chart data
+  const chartData = monthly.map((m, i) => ({
+    name: MONTHS[i],
+    'Bags In':  m.bags_in,
+    'Bags Out': m.bags_out,
+  }));
+
+  const pnlData = monthly.map((m, i) => ({
+    name: MONTHS[i],
+    'Revenue': parseFloat((m.revenue || 0).toFixed(2)),
+  }));
+
+  const grossProfit  = kpis.total_revenue - kpis.total_cogs;
+  const grossMargin  = kpis.total_revenue > 0 ? (grossProfit / kpis.total_revenue * 100) : 0;
+
+  const now = new Date();
+  const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening';
 
   return (
     <div>
+      {/* Page header */}
       <div className="page-header">
         <div>
-          <div className="page-title">Dashboard</div>
-          <div className="page-sub">Welcome to Rindex — {settings.business_name} | {settings.warehouse_location}</div>
+          <div className="page-title">{greeting} 👋</div>
+          <div className="page-sub">
+            Here is your stock overview for {now.toLocaleDateString('en-GH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </div>
         </div>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{new Date().toLocaleDateString('en-GH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+        <button
+          className="btn btn-ghost btn-sm"
+          onClick={() => load(true)}
+          style={{ gap: 6 }}
+        >
+          <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
+          Refresh
+        </button>
       </div>
 
+      {/* Reorder alert */}
       {kpis.reorder_alert && (
         <div className="alert alert-danger">
-          <AlertTriangle size={18} />
-          <strong>⚠ REORDER ALERT:</strong> Current stock ({fmt.number(kpis.balance)} bags) is at or below the reorder level ({fmt.number(settings.reorder_level)} bags). Please order more stock immediately.
+          <AlertTriangle size={17} />
+          <strong>Reorder Alert:</strong> Stock is at {fmt.number(kpis.balance)} bags — below your reorder level of {fmt.number(settings.reorder_level)} bags. Order more stock now.
         </div>
       )}
 
+      {/* KPI Grid */}
       <div className="kpi-grid">
-        <KpiCard label="Total Bags Received" value={fmt.number(kpis.total_in)} sub="All time" color="blue" icon={Package} />
-        <KpiCard label="Total Bags Issued" value={fmt.number(kpis.total_out)} sub="All time" color="red" icon={TrendingDown} />
-        <KpiCard label="Current Balance" value={fmt.number(kpis.balance) + ' bags'} sub="In warehouse now" color="green" icon={Scale} />
-        <KpiCard label="Stock Value" value={fmt.currency(kpis.stock_value)} sub={`@ ${fmt.currency(settings.unit_price)}/bag`} color="gold" icon={DollarSign} />
-        <KpiCard label="Total Revenue" value={fmt.currency(kpis.total_revenue)} sub="All sales" color="purple" icon={TrendingUp} />
-        <KpiCard label="Warehouse Used" value={fmt.percent(kpis.capacity_used)} sub={`of ${fmt.number(settings.warehouse_capacity)} bag capacity`} color="orange" icon={Warehouse} />
-      </div>
-
-      {/* Reorder status strip */}
-      <div className={`alert ${kpis.reorder_alert ? 'alert-danger' : 'alert-success'}`} style={{ marginBottom: 24 }}>
-        {kpis.reorder_alert
-          ? <><AlertTriangle size={16} /> Stock is critically low</>
-          : <><CheckCircle size={16} /> Stock level is healthy — {fmt.number(kpis.balance)} bags in warehouse</>}
+        <KpiCard
+          label="Total Received"
+          value={fmt.number(kpis.total_in) + ' bags'}
+          sub="All time deliveries"
+          iconBg="var(--primary)"
+          icon={Package}
+          onClick={() => navigate('/receipts')}
+        />
+        <KpiCard
+          label="Total Issued"
+          value={fmt.number(kpis.total_out) + ' bags'}
+          sub="All time sales"
+          iconBg="var(--red)"
+          icon={TrendingDown}
+          onClick={() => navigate('/issues')}
+        />
+        <KpiCard
+          label="Current Balance"
+          value={fmt.number(kpis.balance) + ' bags'}
+          sub="In warehouse now"
+          iconBg="var(--green)"
+          icon={Scale}
+          trendLabel={kpis.reorder_alert ? '⚠ Below reorder level' : '✔ Stock level healthy'}
+          onClick={() => navigate('/balance')}
+        />
+        <KpiCard
+          label="Stock Value"
+          value={fmt.currency(kpis.stock_value)}
+          sub={`@ ${fmt.currency(settings.unit_price)}/bag`}
+          iconBg="var(--gold)"
+          icon={DollarSign}
+        />
+        <KpiCard
+          label="Total Revenue"
+          value={fmt.currency(kpis.total_revenue)}
+          sub="All time sales value"
+          iconBg="var(--purple)"
+          icon={TrendingUp}
+          onClick={() => navigate('/pnl')}
+        />
+        <KpiCard
+          label="Warehouse Used"
+          value={fmt.percent(kpis.capacity_used)}
+          sub={`of ${fmt.number(settings.warehouse_capacity)} bag capacity`}
+          iconBg="var(--orange)"
+          icon={Warehouse}
+        />
       </div>
 
       {/* Capacity bar */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-header">
-          <span className="card-title">Warehouse Capacity</span>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{fmt.number(kpis.balance)} / {fmt.number(settings.warehouse_capacity)} bags</span>
+      <div className="card" style={{ marginBottom: 20, padding: '16px 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <div>
+            <span style={{ fontWeight: 700, fontSize: 13 }}>Warehouse Capacity</span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 10 }}>
+              {fmt.number(kpis.balance)} of {fmt.number(settings.warehouse_capacity)} bags occupied
+            </span>
+          </div>
+          <span style={{
+            fontWeight: 700, fontSize: 13,
+            color: kpis.capacity_used > 90 ? 'var(--red)' : kpis.capacity_used > 70 ? 'var(--gold)' : 'var(--green)'
+          }}>
+            {fmt.percent(kpis.capacity_used)}
+          </span>
         </div>
-        <div className="card-body">
-          <div className="progress-bar-wrap">
-            <div className="progress-bar" style={{
-              width: `${Math.min(kpis.capacity_used, 100)}%`,
-              background: kpis.capacity_used > 90 ? 'var(--red)' : kpis.capacity_used > 70 ? 'var(--gold)' : 'var(--green)'
-            }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
-            <span>0</span>
-            <span style={{ fontWeight: 700 }}>{fmt.percent(kpis.capacity_used)} used</span>
-            <span>{fmt.number(settings.warehouse_capacity)} bags</span>
-          </div>
+        <div className="progress-bar-wrap" style={{ height: 8 }}>
+          <div className="progress-bar" style={{
+            width: `${Math.min(kpis.capacity_used, 100)}%`,
+            background: kpis.capacity_used > 90
+              ? 'var(--red)' : kpis.capacity_used > 70
+              ? 'var(--gold)' : 'linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%)'
+          }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: 'var(--text-light)' }}>
+          <span>Empty</span>
+          <span style={{ color: kpis.reorder_alert ? 'var(--red)' : 'var(--green)', fontWeight: 600 }}>
+            {kpis.reorder_alert ? '⚠ Reorder Now' : '✔ OK'}
+          </span>
+          <span>Full</span>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
-        {/* Monthly chart */}
+      {/* Charts row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 20, marginBottom: 20 }}>
+
+        {/* Stock Movement Chart */}
         <div className="card">
-          <div className="card-header"><span className="card-title">Monthly Stock Movement ({new Date().getFullYear()})</span></div>
-          <div className="card-body">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={chartData} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v) => [fmt.number(v) + ' bags']} />
-                <Bar dataKey="Bags In"  fill="var(--green)"        radius={[4,4,0,0]} />
-                <Bar dataKey="Bags Out" fill="var(--red)"          radius={[4,4,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginTop: 8 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 12, height: 12, background: 'var(--green)', borderRadius: 3, display: 'inline-block' }} /> Bags In
+          <div className="card-header">
+            <div>
+              <div className="card-title">Monthly Stock Movement</div>
+              <div className="card-sub">{new Date().getFullYear()} — Bags In vs Bags Out</div>
+            </div>
+            <div style={{ display: 'flex', gap: 14 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-muted)' }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--primary)', display: 'inline-block' }} />
+                Bags In
               </span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 12, height: 12, background: 'var(--red)', borderRadius: 3, display: 'inline-block' }} /> Bags Out
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-muted)' }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--red)', display: 'inline-block' }} />
+                Bags Out
               </span>
             </div>
           </div>
+          <div className="card-body" style={{ paddingTop: 14 }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={chartData} barGap={4} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--bg)', radius: 4 }} />
+                <Bar dataKey="Bags In"  fill="var(--primary)" radius={[6,6,0,0]} />
+                <Bar dataKey="Bags Out" fill="var(--red)"     radius={[6,6,0,0]} opacity={0.8} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* P&L snapshot */}
+        {/* P&L Snapshot */}
         <div className="card">
-          <div className="card-header"><span className="card-title">P&L Snapshot</span></div>
-          <div className="card-body">
-            {[
-              ['Total Revenue', fmt.currency(kpis.total_revenue), 'green'],
-              ['Total COGS', fmt.currency(kpis.total_cogs), 'red'],
-              ['Gross Profit', fmt.currency(kpis.gross_profit), kpis.gross_profit >= 0 ? 'green' : 'red'],
-              ['Pending Payments', fmt.currency(kpis.pending_payments), 'gold'],
-            ].map(([label, value, color]) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>{label}</span>
-                <span style={{ fontWeight: 700, color: `var(--${color})`, fontSize: 14 }}>{value}</span>
-              </div>
-            ))}
-            <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--primary-pale)', borderRadius: 8, fontSize: 12.5, color: 'var(--primary)' }}>
-              💡 Go to <strong>P&L Summary</strong> for the full breakdown with expenses and net profit.
+          <div className="card-header">
+            <div>
+              <div className="card-title">P&L Snapshot</div>
+              <div className="card-sub">Revenue trend {new Date().getFullYear()}</div>
+            </div>
+          </div>
+          <div className="card-body" style={{ paddingTop: 14 }}>
+            <ResponsiveContainer width="100%" height={130}>
+              <AreaChart data={pnlData}>
+                <defs>
+                  <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="var(--primary)" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis hide />
+                <Tooltip content={<PnLTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="Revenue"
+                  stroke="var(--primary)"
+                  strokeWidth={2.5}
+                  fill="url(#revenueGrad)"
+                  dot={false}
+                  activeDot={{ r: 5, fill: 'var(--primary)' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+
+            {/* P&L numbers */}
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                ['Revenue',      fmt.currency(kpis.total_revenue), 'var(--green)'],
+                ['COGS',         fmt.currency(kpis.total_cogs),    'var(--red)'],
+                ['Gross Profit', fmt.currency(grossProfit),        grossProfit >= 0 ? 'var(--green)' : 'var(--red)'],
+                ['Gross Margin', fmt.percent(grossMargin),         grossMargin >= 0 ? 'var(--primary)' : 'var(--red)'],
+              ].map(([label, value, color]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                  <span style={{ color: 'var(--text-muted)' }}>{label}</span>
+                  <span style={{ fontWeight: 700, color }}>{value}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <button className="btn btn-ghost btn-sm" style={{ width: '100%', justifyContent: 'center', fontSize: 12 }} onClick={() => navigate('/pnl')}>
+                View full P&L report →
+              </button>
             </div>
           </div>
         </div>
@@ -136,29 +329,48 @@ export default function Dashboard() {
 
       {/* Recent Activity */}
       <div className="card">
-        <div className="card-header"><span className="card-title">Recent Activity</span></div>
+        <div className="card-header">
+          <div>
+            <div className="card-title">Recent Activity</div>
+            <div className="card-sub">Latest stock movements</div>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/balance')}>View all</button>
+        </div>
         <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th><th>Reference</th><th>Party</th><th>Bags</th><th>Type</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recent_activity.length === 0 && (
-                <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 32 }}>No transactions yet</td></tr>
-              )}
-              {recent_activity.map((r, i) => (
-                <tr key={i}>
-                  <td>{fmt.date(r.date)}</td>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{r.ref}</td>
-                  <td>{r.party}</td>
-                  <td style={{ fontWeight: 700 }}>{fmt.number(r.quantity)}</td>
-                  <td><span className={`badge ${r.type === 'Receipt' ? 'badge-green' : 'badge-red'}`}>{r.type}</span></td>
+          {recent_activity.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📦</div>
+              <h3>No transactions yet</h3>
+              <p>Start by recording a delivery in Stock Receipts.</p>
+            </div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Reference</th>
+                  <th>Party</th>
+                  <th>Bags</th>
+                  <th>Type</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {recent_activity.map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ color: 'var(--text-muted)', fontSize: 13 }}>{fmt.date(r.date)}</td>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: 13 }}>{r.ref}</td>
+                    <td style={{ fontWeight: 500 }}>{r.party}</td>
+                    <td style={{ fontWeight: 700 }}>{fmt.number(r.quantity)}</td>
+                    <td>
+                      <span className={`badge ${r.type === 'Receipt' ? 'badge-teal' : 'badge-red'}`}>
+                        {r.type}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

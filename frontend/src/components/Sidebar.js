@@ -2,8 +2,8 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  LayoutDashboard, PackagePlus, PackageMinus, Scale, TrendingUp,
-  Settings, Users, LogOut, Wheat, Receipt
+  LayoutDashboard, PackagePlus, PackageMinus, Scale,
+  TrendingUp, Settings, Users, LogOut, Wheat, Receipt, ChevronRight
 } from 'lucide-react';
 
 const NAV = [
@@ -22,48 +22,76 @@ const ADMIN_NAV = [
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
   const { pathname } = useLocation();
-  const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
+  const initials  = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
 
   return (
     <div className="sidebar">
+      {/* Logo */}
       <div className="sidebar-logo">
-        <div className="logo-icon"><Wheat size={20} color="#0D2137" /></div>
+        <div className="logo-icon">
+          <Wheat size={19} color="#fff" strokeWidth={2.5} />
+        </div>
         <div>
           <div className="logo-text">Rindex</div>
           <div className="logo-sub">Inventory System</div>
         </div>
       </div>
+
+      {/* Navigation */}
       <nav className="sidebar-nav">
+        <div className="nav-section-label">Main Menu</div>
+
         {NAV.map(({ path, label, icon: Icon }) => (
-          <button key={path} className={`nav-item ${pathname === path ? 'active' : ''}`} onClick={() => navigate(path)}>
-            <Icon size={18} className="nav-icon" />
+          <button
+            key={path}
+            className={`nav-item ${pathname === path ? 'active' : ''}`}
+            onClick={() => navigate(path)}
+          >
+            <Icon size={17} className="nav-icon" strokeWidth={pathname === path ? 2.5 : 2} />
             <span className="nav-label">{label}</span>
+            {pathname === path && (
+              <ChevronRight size={13} style={{ marginLeft: 'auto', opacity: 0.5 }} />
+            )}
           </button>
         ))}
+
         {user?.role === 'admin' && (
           <>
-            <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '10px 16px' }} />
+            <div className="sidebar-divider" style={{ margin: '10px 0' }} />
+            <div className="nav-section-label">Admin</div>
             {ADMIN_NAV.map(({ path, label, icon: Icon }) => (
-              <button key={path} className={`nav-item ${pathname === path ? 'active' : ''}`} onClick={() => navigate(path)}>
-                <Icon size={18} className="nav-icon" />
+              <button
+                key={path}
+                className={`nav-item ${pathname === path ? 'active' : ''}`}
+                onClick={() => navigate(path)}
+              >
+                <Icon size={17} className="nav-icon" strokeWidth={pathname === path ? 2.5 : 2} />
                 <span className="nav-label">{label}</span>
+                {pathname === path && (
+                  <ChevronRight size={13} style={{ marginLeft: 'auto', opacity: 0.5 }} />
+                )}
               </button>
             ))}
           </>
         )}
-        <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '10px 16px' }} />
+
+        <div className="sidebar-divider" style={{ margin: '10px 0' }} />
         <button className="nav-item" onClick={logout}>
-          <LogOut size={18} className="nav-icon" />
+          <LogOut size={17} className="nav-icon" strokeWidth={2} />
           <span className="nav-label">Logout</span>
         </button>
       </nav>
+
+      {/* User footer */}
       <div className="sidebar-footer">
         <div className="user-card">
           <div className="user-avatar">{initials}</div>
-          <div>
-            <div className="user-name">{user?.name}</div>
+          <div style={{ overflow: 'hidden' }}>
+            <div className="user-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.name}
+            </div>
             <div className="user-role">{user?.role}</div>
           </div>
         </div>
