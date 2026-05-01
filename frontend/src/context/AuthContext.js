@@ -10,9 +10,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const stored = localStorage.getItem('rindex_user');
     const token  = localStorage.getItem('rindex_token');
-    if (stored && token) {
-      setUser(JSON.parse(stored));
-    }
+    if (stored && token) setUser(JSON.parse(stored));
     setLoading(false);
   }, []);
 
