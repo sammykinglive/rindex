@@ -76,13 +76,6 @@ export default function Login() {
               {loading ? <><span className="spin">⟳</span> Signing in…</> : 'Sign In to Rindex'}
             </button>
           </form>
-
-          <div style={{ marginTop: 24, padding: 14, background: 'var(--primary-pale)', borderRadius: 8, fontSize: 12.5, color: 'var(--text-muted)', borderLeft: '3px solid var(--primary)' }}>
-            <strong style={{ color: 'var(--primary)' }}>Default Admin Login</strong><br />
-            Email: admin@rindex.com<br />
-            Password: admin123<br />
-            <span style={{ color: 'var(--red)', fontWeight: 600 }}>Change this after your first login!</span>
-          </div>
         </div>
       </div>
     </div>
