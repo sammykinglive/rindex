@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../utils/api';
+import { startKeepAlive, stopKeepAlive } from '../utils/keepAlive';
 
 const AuthContext = createContext(null);
 
@@ -10,7 +11,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const stored = localStorage.getItem('rindex_user');
     const token  = localStorage.getItem('rindex_token');
-    if (stored && token) setUser(JSON.parse(stored));
+    if (stored && token) {
+      setUser(JSON.parse(stored));
+      startKeepAlive(); // Resume keep-alive on page refresh
+    }
     setLoading(false);
   }, []);
 
@@ -19,6 +23,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('rindex_token', res.data.token);
     localStorage.setItem('rindex_user',  JSON.stringify(res.data.user));
     setUser(res.data.user);
+    startKeepAlive(); // Start pinging after login
     return res.data.user;
   }
 
@@ -26,6 +31,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('rindex_token');
     localStorage.removeItem('rindex_user');
     setUser(null);
+    stopKeepAlive(); // Stop pinging after logout
   }
 
   return (

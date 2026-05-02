@@ -1,17 +1,18 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Sidebar   from './components/Sidebar';
-import Login     from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Receipts  from './pages/Receipts';
-import Issues    from './pages/Issues';
-import Balance   from './pages/Balance';
-import Expenses  from './pages/Expenses';
-import PnL       from './pages/PnL';
-import Settings  from './pages/Settings';
-import Users     from './pages/Users';
+import Sidebar       from './components/Sidebar';
+import WakeUpScreen  from './components/WakeUpScreen';
+import Login         from './pages/Login';
+import Dashboard     from './pages/Dashboard';
+import Receipts      from './pages/Receipts';
+import Issues        from './pages/Issues';
+import Balance       from './pages/Balance';
+import Expenses      from './pages/Expenses';
+import PnL           from './pages/PnL';
+import Settings      from './pages/Settings';
+import Users         from './pages/Users';
 
 const TITLES = {
   '/':          '📊 Dashboard',
@@ -33,9 +34,9 @@ function ProtectedRoute({ children, adminOnly }) {
 }
 
 function AppShell() {
-  const { user } = useAuth();
-  const path = window.location.pathname;
-  const title = TITLES[path] || 'Rindex';
+  const { user }  = useAuth();
+  const path      = window.location.pathname;
+  const title     = TITLES[path] || 'Rindex';
   if (!user) return null;
 
   return (
@@ -45,7 +46,7 @@ function AppShell() {
         <div className="topbar">
           <div className="topbar-title">{title}</div>
           <div className="topbar-right">
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--text-muted)', background: 'var(--bg)', padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
               🌽 Rindex &nbsp;·&nbsp; GHS &nbsp;·&nbsp; 50 kg Bags
             </span>
           </div>
@@ -68,27 +69,40 @@ function AppShell() {
   );
 }
 
+function RootApp() {
+  const [serverReady, setServerReady] = useState(false);
+  const handleReady = useCallback(() => setServerReady(true), []);
+
+  if (!serverReady) {
+    return <WakeUpScreen onReady={handleReady} />;
+  }
+
+  return (
+    <BrowserRouter>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: { fontFamily: 'Inter, sans-serif', fontSize: 13.5, borderRadius: 10 },
+          success: { iconTheme: { primary: '#02A793', secondary: '#fff' } },
+          error:   { iconTheme: { primary: '#EF4444', secondary: '#fff' } },
+        }}
+      />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <AppShell />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: { fontFamily: 'Inter, sans-serif', fontSize: 13.5 },
-            success: { iconTheme: { primary: '#1E8449', secondary: '#fff' } },
-            error:   { iconTheme: { primary: '#C0392B', secondary: '#fff' } },
-          }}
-        />
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/*" element={
-            <ProtectedRoute>
-              <AppShell />
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </BrowserRouter>
+      <RootApp />
     </AuthProvider>
   );
 }
