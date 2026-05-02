@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { LayoutDashboard, PackagePlus, PackageMinus, Scale, Wallet, TrendingUp, Settings, Users } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar       from './components/Sidebar';
 import WakeUpScreen  from './components/WakeUpScreen';
@@ -15,14 +16,14 @@ import Settings      from './pages/Settings';
 import Users         from './pages/Users';
 
 const TITLES = {
-  '/':          '📊 Dashboard',
-  '/receipts':  '📥 Stock Receipts',
-  '/issues':    '📤 Stock Issues',
-  '/balance':   '⚖️ Stock Balance',
-  '/expenses':  '💸 Expenses',
-  '/pnl':       '💰 P&L Summary',
-  '/settings':  '⚙️ Settings',
-  '/users':     '👥 Manage Users',
+  '/':          { label: 'Dashboard', icon: LayoutDashboard },
+  '/receipts':  { label: 'Stock Receipts', icon: PackagePlus },
+  '/issues':    { label: 'Stock Issues', icon: PackageMinus },
+  '/balance':   { label: 'Stock Balance', icon: Scale },
+  '/expenses':  { label: 'Expenses', icon: Wallet },
+  '/pnl':       { label: 'P&L Summary', icon: TrendingUp },
+  '/settings':  { label: 'Settings', icon: Settings },
+  '/users':     { label: 'Manage Users', icon: Users },
 };
 
 function ProtectedRoute({ children, adminOnly }) {
@@ -36,13 +37,20 @@ function ProtectedRoute({ children, adminOnly }) {
 function AppShell() {
   const { user }  = useAuth();
   const path      = window.location.pathname;
-  const title     = TITLES[path] || 'Rindex';
+  const titleMeta = TITLES[path] || { label: 'Rindex' };
+  const TitleIcon = titleMeta.icon;
   if (!user) return null;
 
   return (
     <div className="app-shell">
       <Sidebar />
       <div className="main-content">
+        <div className="topbar">
+          <div className="topbar-title">
+            {TitleIcon ? <TitleIcon size={18} style={{ marginRight: 8 }} /> : null}
+            {titleMeta.label}
+          </div>
+        </div>
         <div className="page-body">
           <Routes>
             <Route path="/"         element={<Dashboard />} />
