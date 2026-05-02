@@ -33,9 +33,9 @@ export default function Login() {
           </div>
           <div className="login-brand">Rindex</div>
         </div>
-        <div className="login-tagline" style={{ position: 'relative', zIndex: 1 }}>Maize Inventory Management System</div>
+        <div className="login-tagline" style={{ position: 'relative', zIndex: 1 }}>Inventory Management System</div>
         <div style={{ marginTop: 48, display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 300, position: 'relative', zIndex: 1 }}>
-          {[['📦','Real-time stock tracking'],['📊','Live P&L calculations'],['⚠️','Automatic reorder alerts'],['👥','Multi-user access control']].map(([icon, text]) => (
+          {[['','Real-time stock tracking'],['','Live P&L calculations'],['','Automatic reorder alerts'],['','Multi-user access control']].map(([icon, text]) => (
             <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
               <span style={{ fontSize: 20 }}>{icon}</span> {text}
             </div>
