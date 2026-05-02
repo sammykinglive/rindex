@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { LayoutDashboard, PackagePlus, PackageMinus, Scale, Wallet, TrendingUp, Settings, Users } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar       from './components/Sidebar';
 import WakeUpScreen  from './components/WakeUpScreen';
@@ -16,14 +15,14 @@ import Settings      from './pages/Settings';
 import Users         from './pages/Users';
 
 const TITLES = {
-  '/':          { label: 'Dashboard', icon: LayoutDashboard },
-  '/receipts':  { label: 'Stock Receipts', icon: PackagePlus },
-  '/issues':    { label: 'Stock Issues', icon: PackageMinus },
-  '/balance':   { label: 'Stock Balance', icon: Scale },
-  '/expenses':  { label: 'Expenses', icon: Wallet },
-  '/pnl':       { label: 'P&L Summary', icon: TrendingUp },
-  '/settings':  { label: 'Settings', icon: Settings },
-  '/users':     { label: 'Manage Users', icon: Users },
+  '/':          '📊 Dashboard',
+  '/receipts':  '📥 Stock Receipts',
+  '/issues':    '📤 Stock Issues',
+  '/balance':   '⚖️ Stock Balance',
+  '/expenses':  '💸 Expenses',
+  '/pnl':       '💰 P&L Summary',
+  '/settings':  '⚙️ Settings',
+  '/users':     '👥 Manage Users',
 };
 
 function ProtectedRoute({ children, adminOnly }) {
@@ -37,8 +36,7 @@ function ProtectedRoute({ children, adminOnly }) {
 function AppShell() {
   const { user }  = useAuth();
   const path      = window.location.pathname;
-  const titleMeta = TITLES[path] || { label: 'Rindex' };
-  const TitleIcon = titleMeta.icon;
+  const title     = TITLES[path] || 'Rindex';
   if (!user) return null;
 
   return (
@@ -46,9 +44,11 @@ function AppShell() {
       <Sidebar />
       <div className="main-content">
         <div className="topbar">
-          <div className="topbar-title">
-            {TitleIcon ? <TitleIcon size={18} style={{ marginRight: 8 }} /> : null}
-            {titleMeta.label}
+          <div className="topbar-title">{title}</div>
+          <div className="topbar-right">
+            <span style={{ fontSize: 12.5, color: 'var(--text-muted)', background: 'var(--bg)', padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
+              🌽 Rindex &nbsp;·&nbsp; GHS &nbsp;·&nbsp; 50 kg Bags
+            </span>
           </div>
         </div>
         <div className="page-body">
