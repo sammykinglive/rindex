@@ -43,14 +43,6 @@ function AppShell() {
     <div className="app-shell">
       <Sidebar />
       <div className="main-content">
-        <div className="topbar">
-          <div className="topbar-title">{title}</div>
-          <div className="topbar-right">
-            <span style={{ fontSize: 12.5, color: 'var(--text-muted)', background: 'var(--bg)', padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
-              🌽 Rindex &nbsp;·&nbsp; GHS &nbsp;·&nbsp; 50 kg Bags
-            </span>
-          </div>
-        </div>
         <div className="page-body">
           <Routes>
             <Route path="/"         element={<Dashboard />} />
