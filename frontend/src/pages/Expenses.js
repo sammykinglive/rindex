@@ -181,7 +181,7 @@ export default function Expenses() {
               </div>
 
               {/* Row 2 — Paid By, Paid To */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div className="two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Paid By (Personnel) *</label>
                   <InputWithIcon icon={User} className="form-control" placeholder="e.g. Samuel — who gave the money" value={form.paid_by} onChange={e => set('paid_by', e.target.value)} />
@@ -195,7 +195,7 @@ export default function Expenses() {
               </div>
 
               {/* Row 3 — Payment Method, Receipt No */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div className="two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Payment Method</label>
                   <div style={{ position: 'relative' }}>
