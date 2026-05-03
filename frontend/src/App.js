@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { Menu } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar       from './components/Sidebar';
 import WakeUpScreen  from './components/WakeUpScreen';
@@ -34,23 +35,39 @@ function ProtectedRoute({ children, adminOnly }) {
 }
 
 function AppShell() {
-  const { user }  = useAuth();
-  const path      = window.location.pathname;
-  const title     = TITLES[path] || 'Rindex';
+  const { user } = useAuth();
+  const { pathname } = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const title = TITLES[pathname] || 'Rindex';
+
   if (!user) return null;
 
   return (
     <div className="app-shell">
-      <Sidebar />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
       <div className="main-content">
+        {/* Topbar */}
         <div className="topbar">
-          <div className="topbar-title">{title}</div>
+          <div className="topbar-left">
+            {/* Hamburger — only visible on mobile */}
+            <button
+              className="hamburger-btn"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="topbar-title">{title}</div>
+          </div>
           <div className="topbar-right">
-            <span style={{ fontSize: 12.5, color: 'var(--text-muted)', background: 'var(--bg)', padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
-              🌽 Rindex &nbsp;·&nbsp; GHS &nbsp;·&nbsp; 50 kg Bags
+            <span className="topbar-badge">
+              🌽 Rindex · GHS · 50 kg Bags
             </span>
           </div>
         </div>
+
+        {/* Page content */}
         <div className="page-body">
           <Routes>
             <Route path="/"         element={<Dashboard />} />
@@ -73,9 +90,7 @@ function RootApp() {
   const [serverReady, setServerReady] = useState(false);
   const handleReady = useCallback(() => setServerReady(true), []);
 
-  if (!serverReady) {
-    return <WakeUpScreen onReady={handleReady} />;
-  }
+  if (!serverReady) return <WakeUpScreen onReady={handleReady} />;
 
   return (
     <BrowserRouter>
