@@ -452,6 +452,18 @@ td { padding: 11px 14px; color: var(--text); vertical-align: middle; }
 .page-title { font-size: 19px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
 .page-sub   { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
 
+.page-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.header-selects {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .pnl-filter {
   display: flex;
   align-items: center;
@@ -567,6 +579,10 @@ td { padding: 11px 14px; color: var(--text); vertical-align: middle; }
   .page-header .btn { width: 100%; justify-content: center; }
 
   .summary-banner { flex-direction: column; align-items: stretch; }
+  .page-header-actions { flex-direction: column; align-items: stretch; }
+  .page-header-actions .header-selects { flex-direction: column; align-items: stretch; }
+  .page-header-actions .form-control { width: 100% !important; }
+  .page-header-actions .btn { width: 100%; }
 
   /* Charts — full width stacked */
   .chart-grid { grid-template-columns: 1fr !important; }

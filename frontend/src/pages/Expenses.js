@@ -115,13 +115,15 @@ export default function Expenses() {
           <div className="page-title">💸 Expenses</div>
           <div className="page-sub">Track and manage all operating costs</div>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <select className="form-control" style={{ width: 140 }} value={month} onChange={e => setMonth(parseInt(e.target.value))}>
-            {MONTH_NAMES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-          </select>
-          <select className="form-control" style={{ width: 100 }} value={year} onChange={e => setYear(parseInt(e.target.value))}>
-            {years.map(y => <option key={y}>{y}</option>)}
-          </select>
+        <div className="page-header-actions" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div className="header-selects" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <select className="form-control" style={{ width: 140 }} value={month} onChange={e => setMonth(parseInt(e.target.value))}>
+              {MONTH_NAMES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+            </select>
+            <select className="form-control" style={{ width: 100 }} value={year} onChange={e => setYear(parseInt(e.target.value))}>
+              {years.map(y => <option key={y}>{y}</option>)}
+            </select>
+          </div>
           <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
             <Plus size={16} /> Add Expense
           </button>
