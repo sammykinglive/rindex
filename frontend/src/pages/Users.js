@@ -37,7 +37,7 @@ export default function Users() {
         <div><div className="page-title">👥 Manage Users</div><div className="page-sub">Control who has access to Rindex</div></div>
         <button className="btn btn-primary" onClick={() => { setForm(EMPTY); setModal(true); }}><Plus size={16} /> Add User</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+      <div className="two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
         {[
           ['🔐 Admin', 'Full access — all data, settings, user management', 'var(--purple-light)', 'var(--purple)'],
           ['👤 Staff', 'Can record receipts and issues, view dashboard', 'var(--primary-pale)', 'var(--primary)'],

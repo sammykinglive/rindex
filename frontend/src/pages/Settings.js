@@ -40,7 +40,7 @@ export default function Settings() {
   return (
     <div>
       <div className="page-header"><div><div className="page-title">⚙️ Settings</div><div className="page-sub">Configure your business settings</div></div></div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div className="two-col settings-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <div className="card">
           <div className="card-header"><span className="card-title">Business & Warehouse</span></div>
           <div className="card-body">

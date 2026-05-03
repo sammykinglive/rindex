@@ -48,7 +48,7 @@ export default function Balance() {
         </div>
       </div>
 
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+      <div className="kpi-grid" >
         {[
           { label: 'Total Received', value: fmt.number(kpis.total_in) + ' bags', icon: TrendingUp,    color: 'var(--primary)' },
           { label: 'Total Issued',   value: fmt.number(kpis.total_out) + ' bags', icon: TrendingDown,  color: 'var(--red)' },
