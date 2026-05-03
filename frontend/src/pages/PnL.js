@@ -288,7 +288,7 @@ export default function PnL() {
         </div>
 
         {/* Filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div className="pnl-filter">
           <div style={{ display: 'flex', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 10, padding: 3 }}>
             {['alltime', 'month'].map(m => (
               <button key={m} onClick={() => setMode(m)} style={{
@@ -329,7 +329,7 @@ export default function PnL() {
       </div>
 
       {/* ── 6 Cards — 3 x 2 grid ─────────────────────────────── */}
-      <div style={{
+      <div className="three-col" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(3, 1fr)',
         gap: 14,
@@ -339,7 +339,7 @@ export default function PnL() {
       </div>
 
       {/* ── Charts + Statement ────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 18, marginBottom: 18 }}>
+      <div className="two-col" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 18, marginBottom: 18 }}>
 
         {/* Trend charts stacked */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -388,7 +388,7 @@ export default function PnL() {
       </div>
 
       {/* ── Bottom metrics ────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+      <div className="three-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
         {[
           ['Gross Margin',       fmt.percent(grossMargin),   'var(--green)'],
           ['Net Margin',          fmt.percent(netMargin),     netMargin >= 0 ? 'var(--green)' : 'var(--red)'],
@@ -404,16 +404,6 @@ export default function PnL() {
         ))}
       </div>
 
-      {/* Responsive styles */}
-      <style>{`
-        @media (max-width: 768px) {
-          .pnl-cards { grid-template-columns: repeat(2, 1fr) !important; }
-          .pnl-main  { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 480px) {
-          .pnl-cards { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </div>
   );
 }

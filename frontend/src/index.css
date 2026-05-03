@@ -452,6 +452,20 @@ td { padding: 11px 14px; color: var(--text); vertical-align: middle; }
 .page-title { font-size: 19px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
 .page-sub   { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
 
+.pnl-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.summary-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .divider { height: 1px; background: var(--border); margin: 18px 0; }
 
 /* ─── Misc ────────────────────────────────────────────────────── */
@@ -551,6 +565,8 @@ td { padding: 11px 14px; color: var(--text); vertical-align: middle; }
   .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
   .page-header > div:last-child { width: 100%; }
   .page-header .btn { width: 100%; justify-content: center; }
+
+  .summary-banner { flex-direction: column; align-items: stretch; }
 
   /* Charts — full width stacked */
   .chart-grid { grid-template-columns: 1fr !important; }

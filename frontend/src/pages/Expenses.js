@@ -129,7 +129,7 @@ export default function Expenses() {
       </div>
 
       {/* Total banner */}
-      <div style={{
+      <div className="summary-banner" style={{
         background: 'linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%)',
         borderRadius: 'var(--radius)',
         padding: '22px 28px',
@@ -163,7 +163,7 @@ export default function Expenses() {
             <form onSubmit={handleAdd}>
 
               {/* Row 1 — Date, Category, Amount */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div className="form-grid" style={{ gap: 14, marginBottom: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Date *</label>
                   <InputWithIcon icon={Calendar} className="form-control" type="date" value={form.date} onChange={e => set('date', e.target.value)} required />
@@ -184,12 +184,12 @@ export default function Expenses() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Paid By (Personnel) *</label>
-                  <InputWithIcon icon={User} className="form-control" placeholder="" value={form.paid_by} onChange={e => set('paid_by', e.target.value)} />
+                  <InputWithIcon icon={User} className="form-control" placeholder="e.g. Samuel — who gave the money" value={form.paid_by} onChange={e => set('paid_by', e.target.value)} />
                   <span style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 3 }}>The person who paid or disbursed this amount</span>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Paid To (Recipient)</label>
-                  <InputWithIcon icon={User} className="form-control" placeholder="" value={form.paid_to} onChange={e => set('paid_to', e.target.value)} />
+                  <InputWithIcon icon={User} className="form-control" placeholder="e.g. Driver Kofi — who received the money" value={form.paid_to} onChange={e => set('paid_to', e.target.value)} />
                   <span style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 3 }}>The person or company who received the money</span>
                 </div>
               </div>
@@ -207,14 +207,14 @@ export default function Expenses() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Receipt / Voucher No.</label>
-                  <InputWithIcon icon={Hash} className="form-control" placeholder="" value={form.receipt_no} onChange={e => set('receipt_no', e.target.value)} />
+                  <InputWithIcon icon={Hash} className="form-control" placeholder="e.g. RCP-001 (optional)" value={form.receipt_no} onChange={e => set('receipt_no', e.target.value)} />
                 </div>
               </div>
 
               {/* Row 4 — Description */}
               <div className="form-group" style={{ marginBottom: 18 }}>
                 <label className="form-label">Description / Notes</label>
-                <textarea className="form-control" rows={2} placeholder="" value={form.description} onChange={e => set('description', e.target.value)} style={{ resize: 'vertical' }} />
+                <textarea className="form-control" rows={2} placeholder="e.g. Lunch money for 3 drivers — market delivery trip on 1st May" value={form.description} onChange={e => set('description', e.target.value)} style={{ resize: 'vertical' }} />
               </div>
 
               {/* Live preview */}
@@ -243,7 +243,7 @@ export default function Expenses() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
+      <div className="two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
 
         {/* Category Summary */}
         <div className="card">
