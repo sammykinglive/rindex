@@ -3,6 +3,8 @@ import { Plus, Pencil, Trash2, Search, X } from 'lucide-react';
 import api from '../utils/api';
 import { fmt } from '../utils/format';
 import toast from 'react-hot-toast';
+import { exportReceiptsToExcel } from '../utils/exportExcel';
+import { exportReceiptsPDF } from '../utils/exportPDF';
 
 const EMPTY = { date: new Date().toISOString().slice(0,10), grn_number: '', supplier_name: '', quantity: '', unit_cost: '', delivery_note: '', condition: 'Good', remarks: '' };
 

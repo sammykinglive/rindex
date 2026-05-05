@@ -6,6 +6,8 @@ import {
 } from 'recharts';
 import api from '../utils/api';
 import { fmt, MONTH_NAMES } from '../utils/format';
+import { exportPnLToExcel } from '../utils/exportExcel';
+import { exportPnLPDF } from '../utils/exportPDF';
 
 // ── Icons ────────────────────────────────────────────────────────
 const Icon = ({ path, color }) => (
@@ -288,7 +290,7 @@ export default function PnL() {
         </div>
 
         {/* Filter */}
-        <div className="pnl-filter">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 10, padding: 3 }}>
             {['alltime', 'month'].map(m => (
               <button key={m} onClick={() => setMode(m)} style={{
@@ -313,6 +315,8 @@ export default function PnL() {
             </>
           )}
         </div>
+          <button className="btn btn-ghost btn-sm" onClick={() => exportPnLToExcel({ revenue, cogs, grossProfit, opex, netProfit, grossMargin, netMargin, roi, bags_sold, bags_purchased, avg_sell, avg_cost, profitPerBag }, periodLabel)}>📊 Excel</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => exportPnLPDF({ revenue, cogs, grossProfit, opex, netProfit, grossMargin, netMargin, roi, bags_sold, bags_purchased, avg_sell, avg_cost, profitPerBag }, periodLabel)}>📄 PDF</button>
       </div>
 
       {/* Period badge */}
@@ -329,17 +333,12 @@ export default function PnL() {
       </div>
 
       {/* ── 6 Cards — 3 x 2 grid ─────────────────────────────── */}
-      <div className="three-col" style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: 14,
-        marginBottom: 20,
-      }}>
+      <div className="kpi-grid" style={{ marginBottom: 20 }}>
         {cards.map(card => <StatCard key={card.label} {...card} />)}
       </div>
 
       {/* ── Charts + Statement ────────────────────────────────── */}
-      <div className="two-col" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 18, marginBottom: 18 }}>
+      <div className="chart-grid" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 18, marginBottom: 18 }}>
 
         {/* Trend charts stacked */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -388,7 +387,7 @@ export default function PnL() {
       </div>
 
       {/* ── Bottom metrics ────────────────────────────────────── */}
-      <div className="three-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+      <div className="three-col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
         {[
           ['Gross Margin',       fmt.percent(grossMargin),   'var(--green)'],
           ['Net Margin',          fmt.percent(netMargin),     netMargin >= 0 ? 'var(--green)' : 'var(--red)'],
@@ -404,6 +403,16 @@ export default function PnL() {
         ))}
       </div>
 
+      {/* Responsive styles */}
+      <style>{`
+        @media (max-width: 768px) {
+          .pnl-cards { grid-template-columns: repeat(2, 1fr) !important; }
+          .pnl-main  { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 480px) {
+          .pnl-cards { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Scale, TrendingUp, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react';
 import api from '../utils/api';
 import { fmt } from '../utils/format';
+import { exportBalanceToExcel } from '../utils/exportExcel';
+import { exportBalancePDF } from '../utils/exportPDF';
 
 export default function Balance() {
   const [data, setData]         = useState(null);
