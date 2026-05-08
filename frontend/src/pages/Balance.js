@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Scale, TrendingUp, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Scale, TrendingUp, TrendingDown, AlertTriangle, Download } from 'lucide-react';
 import api from '../utils/api';
 import { fmt } from '../utils/format';
 import { exportBalanceToExcel } from '../utils/exportExcel';
@@ -48,26 +48,40 @@ export default function Balance() {
           <div className="page-title">⚖️ Stock Balance</div>
           <div className="page-sub">Live warehouse ledger — all movements with running balance</div>
         </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => exportBalanceToExcel(displayLedger)}>
+            <Download size={14} /> Excel
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => exportBalancePDF(displayLedger, kpis)}>
+            <Download size={14} /> PDF
+          </button>
+        </div>
       </div>
 
-      <div className="kpi-grid" >
+      {/* KPI Cards */}
+      <div className="kpi-grid">
         {[
           { label: 'Total Received', value: fmt.number(kpis.total_in) + ' bags', icon: TrendingUp,    color: 'var(--primary)' },
           { label: 'Total Issued',   value: fmt.number(kpis.total_out) + ' bags', icon: TrendingDown,  color: 'var(--red)' },
           { label: 'Balance',        value: fmt.number(kpis.balance) + ' bags',   icon: Scale,         color: 'var(--green)' },
-          { label: 'Stock Value',    value: fmt.currency(kpis.stock_value),        icon: CheckCircle,   color: 'var(--gold)' },
+          { label: 'Stock Value',    value: fmt.currency(kpis.stock_value),        icon: TrendingUp,    color: 'var(--gold)' },
+          { label: 'Capacity Used',  value: fmt.percent(kpis.capacity_used),       icon: AlertTriangle, color: 'var(--orange)' },
+          { label: 'Reorder Status', value: kpis.reorder_alert ? '⚠ REORDER' : '✔ OK', icon: AlertTriangle, color: kpis.reorder_alert ? 'var(--red)' : 'var(--green)' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div className="kpi-card" key={label}>
-            <div className="kpi-icon-wrap" style={{ background: color + '20' }}>
-              <Icon size={20} color={color} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              <div className="kpi-icon-wrap" style={{ background: color + '20' }}>
+                <Icon size={18} color={color} strokeWidth={2} />
+              </div>
+              <span className="kpi-label">{label}</span>
             </div>
-            <div className="kpi-label">{label}</div>
-            <div className="kpi-value" style={{ fontSize: 20 }}>{value}</div>
+            <div className="kpi-value" style={{ color }}>{value}</div>
           </div>
         ))}
       </div>
 
-      <div className="card" style={{ marginBottom: 20 }}>
+      {/* Capacity bar */}
+      <div className="card" style={{ marginBottom: 18 }}>
         <div className="card-body">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontWeight: 600, fontSize: 13 }}>Warehouse Capacity</span>
@@ -88,6 +102,7 @@ export default function Balance() {
         <div className="alert alert-danger"><AlertTriangle size={16} /> Stock is below reorder level — order more bags immediately.</div>
       )}
 
+      {/* Ledger table */}
       <div className="card">
         <div className="card-header">
           <span className="card-title">Full Transaction Ledger</span>
@@ -105,14 +120,14 @@ export default function Balance() {
                 {displayLedger.map((row, idx) => (
                   <tr key={`${row.type}-${row.id}`}>
                     <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{ledger.length - idx}</td>
-                    <td style={{ fontSize: 13 }}>{fmt.date(row.date)}</td>
+                    <td>{fmt.date(row.date)}</td>
                     <td><span className={`badge ${row.type === 'Receipt' ? 'badge-teal' : 'badge-red'}`}>{row.type}</span></td>
-                    <td style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: 13 }}>{row.ref}</td>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{row.ref}</td>
                     <td style={{ fontWeight: 500 }}>{row.party}</td>
                     <td style={{ fontWeight: 700, color: 'var(--green)' }}>{row.type === 'Receipt' ? fmt.number(row.quantity) : '—'}</td>
                     <td style={{ fontWeight: 700, color: 'var(--red)' }}>{row.type === 'Issue' ? fmt.number(row.quantity) : '—'}</td>
                     <td>
-                      <span style={{ fontWeight: 800, fontSize: 13, color: row.running_balance <= parseInt(settings.reorder_level) ? 'var(--red)' : 'var(--primary)' }}>
+                      <span style={{ fontWeight: 800, color: row.running_balance <= parseInt(settings.reorder_level) ? 'var(--red)' : 'var(--primary)' }}>
                         {fmt.number(row.running_balance)} bags
                       </span>
                     </td>
