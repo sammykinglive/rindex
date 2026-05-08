@@ -6,7 +6,12 @@ import toast from 'react-hot-toast';
 import { exportIssuesToExcel } from '../utils/exportExcel';
 import { exportIssuesPDF, printInvoice } from '../utils/exportPDF';
 
-const EMPTY = { date: new Date().toISOString().slice(0,10), invoice_number: '', customer_name: '', quantity: '', selling_price: '', payment_method: 'Cash', payment_status: 'Paid', remarks: '' };
+const EMPTY = {
+  date: new Date().toISOString().slice(0,10),
+  invoice_number: '', customer_name: '',
+  quantity: '', selling_price: '',
+  payment_method: 'Cash', payment_status: 'Paid', remarks: ''
+};
 
 function Modal({ title, onClose, onSubmit, form, setForm, loading, settings }) {
   const price = parseFloat(form.selling_price) || parseFloat(settings?.unit_price) || 0;
@@ -66,7 +71,9 @@ function Modal({ title, onClose, onSubmit, form, setForm, loading, settings }) {
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-danger" disabled={loading}>{loading ? 'Saving…' : 'Save Issue'}</button>
+            <button type="submit" className="btn btn-danger" disabled={loading}>
+              {loading ? 'Saving…' : 'Save Issue'}
+            </button>
           </div>
         </form>
       </div>
@@ -115,13 +122,22 @@ export default function Issues() {
 
   async function handleSubmit(e) {
     e.preventDefault(); setSaving(true);
-    const payload = { ...form, selling_price: parseFloat(form.selling_price) || parseFloat(settings.unit_price) };
+    const payload = {
+      ...form,
+      selling_price: parseFloat(form.selling_price) || parseFloat(settings.unit_price)
+    };
     try {
-      if (modal === 'edit') { await api.put(`/issues/${editId}`, payload); toast.success('Updated.'); }
-      else { await api.post('/issues', payload); toast.success('Sale recorded! ✅'); }
+      if (modal === 'edit') {
+        await api.put(`/issues/${editId}`, payload);
+        toast.success('Updated.');
+      } else {
+        await api.post('/issues', payload);
+        toast.success('Sale recorded! ✅');
+      }
       setModal(null); load();
-    } catch (err) { toast.error(err.response?.data?.error || 'Error saving.'); }
-    finally { setSaving(false); }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error saving.');
+    } finally { setSaving(false); }
   }
 
   async function handleDelete(id) {
@@ -131,7 +147,12 @@ export default function Issues() {
   }
 
   function openEdit(r) {
-    setForm({ date: r.date, invoice_number: r.invoice_number, customer_name: r.customer_name, quantity: r.quantity, selling_price: r.selling_price, payment_method: r.payment_method, payment_status: r.payment_status, remarks: r.remarks || '' });
+    setForm({
+      date: r.date, invoice_number: r.invoice_number,
+      customer_name: r.customer_name, quantity: r.quantity,
+      selling_price: r.selling_price, payment_method: r.payment_method,
+      payment_status: r.payment_status, remarks: r.remarks || ''
+    });
     setEditId(r.id); setModal('edit');
   }
 
@@ -158,7 +179,6 @@ export default function Issues() {
         </div>
       </div>
 
-      {/* Totals */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
         {[
           ['Total Bags Sold', fmt.number(totals.total_bags) + ' bags', 'var(--red-light)', 'var(--red)'],
@@ -171,7 +191,6 @@ export default function Issues() {
         ))}
       </div>
 
-      {/* Filters */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-body" style={{ paddingTop: 12, paddingBottom: 12 }}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -194,7 +213,6 @@ export default function Issues() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="card">
         <div className="table-wrap">
           {loading ? (
@@ -202,11 +220,19 @@ export default function Issues() {
               <div style={{ width: 32, height: 32, border: '3px solid var(--primary-pale)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
             </div>
           ) : issues.length === 0 ? (
-            <div className="empty-state"><div className="empty-state-icon">🛒</div><h3>No issues yet</h3><p>Click "Record Sale" to add your first sale.</p></div>
+            <div className="empty-state">
+              <div className="empty-state-icon">🛒</div>
+              <h3>No issues yet</h3>
+              <p>Click "Record Sale" to add your first sale.</p>
+            </div>
           ) : (
             <table>
               <thead>
-                <tr><th>Date</th><th>Invoice</th><th>Customer</th><th>Qty (Bags)</th><th>Price/Bag</th><th>Total Sales</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
+                <tr>
+                  <th>Date</th><th>Invoice</th><th>Customer</th>
+                  <th>Qty (Bags)</th><th>Price/Bag</th><th>Total Sales</th>
+                  <th>Payment</th><th>Status</th><th>Actions</th>
+                </tr>
               </thead>
               <tbody>
                 {issues.map(r => (
@@ -245,7 +271,17 @@ export default function Issues() {
         </div>
       </div>
 
-      {modal && <Modal title={modal === 'edit' ? 'Edit Issue' : 'Record New Sale'} onClose={() => setModal(null)} onSubmit={handleSubmit} form={form} setForm={setForm} loading={saving} settings={settings} />}
+      {modal && (
+        <Modal
+          title={modal === 'edit' ? 'Edit Issue' : 'Record New Sale'}
+          onClose={() => setModal(null)}
+          onSubmit={handleSubmit}
+          form={form}
+          setForm={setForm}
+          loading={saving}
+          settings={settings}
+        />
+      )}
     </div>
   );
 }
