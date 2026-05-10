@@ -18,21 +18,26 @@ export default function WakeUpScreen({ onReady }) {
   const [attempts, setAttempts] = useState(0);
 
   useEffect(() => {
-    // Cycle through friendly messages
-    const msgTimer = setInterval(() => {
-      setMsgIndex(i => (i + 1) % messages.length);
-    }, 4000);
-
-    // Animate dots
-    const dotsTimer = setInterval(() => {
-      setDots(d => d.length >= 3 ? '' : d + '.');
-    }, 500);
-
+    const msgTimer  = setInterval(() => setMsgIndex(i => (i + 1) % messages.length), 4000);
+    const dotsTimer = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 500);
     return () => { clearInterval(msgTimer); clearInterval(dotsTimer); };
   }, []);
 
   useEffect(() => {
     let stopped = false;
+
+    // Clear expired tokens before checking server
+    try {
+      const token = localStorage.getItem('rindex_token');
+      if (token) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.exp * 1000 < Date.now()) {
+          localStorage.removeItem('rindex_token');
+          localStorage.removeItem('rindex_user');
+          console.log('[Rindex] Expired token cleared — please log in again');
+        }
+      }
+    } catch {}
 
     async function check() {
       try {
@@ -45,7 +50,7 @@ export default function WakeUpScreen({ onReady }) {
 
       if (!stopped) {
         setAttempts(a => a + 1);
-        setTimeout(check, 3000); // Retry every 3 seconds
+        setTimeout(check, 3000);
       }
     }
 
