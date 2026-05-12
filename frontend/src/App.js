@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Menu } from 'lucide-react';
+import { Menu, Sun, Moon } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import Sidebar       from './components/Sidebar';
 import WakeUpScreen  from './components/WakeUpScreen';
 import Login         from './pages/Login';
@@ -34,6 +35,39 @@ function ProtectedRoute({ children, adminOnly }) {
   return children;
 }
 
+function ThemeToggle() {
+  const { dark, toggle } = useTheme();
+  return (
+    <button
+      onClick={toggle}
+      title={dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+      style={{
+        width: 36, height: 36,
+        borderRadius: 'var(--radius-sm)',
+        border: '1.5px solid var(--border)',
+        background: 'var(--card)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer',
+        color: dark ? '#FCD34D' : 'var(--text-muted)',
+        transition: 'all 0.2s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = 'var(--primary)';
+        e.currentTarget.style.color = dark ? '#FCD34D' : 'var(--primary)';
+        e.currentTarget.style.background = 'var(--primary-pale)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = 'var(--border)';
+        e.currentTarget.style.color = dark ? '#FCD34D' : 'var(--text-muted)';
+        e.currentTarget.style.background = 'var(--card)';
+      }}
+    >
+      {dark ? <Sun size={17} /> : <Moon size={17} />}
+    </button>
+  );
+}
+
 function AppShell() {
   const { user } = useAuth();
   const { pathname } = useLocation();
@@ -47,10 +81,8 @@ function AppShell() {
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="main-content">
-        {/* Topbar */}
         <div className="topbar">
           <div className="topbar-left">
-            {/* Hamburger — only visible on mobile */}
             <button
               className="hamburger-btn"
               onClick={() => setSidebarOpen(true)}
@@ -61,13 +93,13 @@ function AppShell() {
             <div className="topbar-title">{title}</div>
           </div>
           <div className="topbar-right">
+            <ThemeToggle />
             <span className="topbar-badge">
               🌽 Rindex · GHS · 50 kg Bags
             </span>
           </div>
         </div>
 
-        {/* Page content */}
         <div className="page-body">
           <Routes>
             <Route path="/"         element={<Dashboard />} />
@@ -116,8 +148,10 @@ function RootApp() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <RootApp />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <RootApp />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
