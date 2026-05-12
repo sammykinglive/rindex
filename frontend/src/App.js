@@ -17,14 +17,14 @@ import Settings      from './pages/Settings';
 import Users         from './pages/Users';
 
 const TITLES = {
-  '/':          '📊 Dashboard',
-  '/receipts':  '📥 Stock Receipts',
-  '/issues':    '📤 Stock Issues',
-  '/balance':   '⚖️ Stock Balance',
-  '/expenses':  '💸 Expenses',
-  '/pnl':       '💰 P&L Summary',
-  '/settings':  '⚙️ Settings',
-  '/users':     '👥 Manage Users',
+  '/':          'Dashboard',
+  '/receipts':  'Stock Receipts',
+  '/issues':    'Stock Issues',
+  '/balance':   'Stock Balance',
+  '/expenses':  'Expenses',
+  '/pnl':       'P&L Summary',
+  '/settings':  'Settings',
+  '/users':     'Manage Users',
 };
 
 function ProtectedRoute({ children, adminOnly }) {
