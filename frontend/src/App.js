@@ -94,9 +94,6 @@ function AppShell() {
           </div>
           <div className="topbar-right">
             <ThemeToggle />
-            <span className="topbar-badge">
-              🌽 Rindex · GHS · 50 kg Bags
-            </span>
           </div>
         </div>
 
