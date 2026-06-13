@@ -29,7 +29,7 @@ export default function Login() {
       <div className="login-left">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, position: 'relative', zIndex: 1 }}>
           <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 14, width: 64, height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
-            <Wheat size={32} color="#fff" />
+            
           </div>
           <div className="login-brand">Rindex</div>
         </div>
