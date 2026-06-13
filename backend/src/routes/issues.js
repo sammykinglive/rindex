@@ -8,14 +8,16 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const { from, to, customer, status } = req.query;
     let query = `SELECT i.*, u.name as created_by_name FROM stock_issues i LEFT JOIN users u ON i.created_by = u.id WHERE 1=1`;
+    let totalsQuery = `SELECT COALESCE(SUM(quantity),0) as total_bags, COALESCE(SUM(total_sales),0) as total_sales FROM stock_issues WHERE 1=1`;
     const params = [];
-    if (from)     { query += ' AND i.date >= ?'; params.push(from); }
-    if (to)       { query += ' AND i.date <= ?'; params.push(to); }
-    if (customer) { query += ' AND i.customer_name LIKE ?'; params.push(`%${customer}%`); }
-    if (status)   { query += ' AND i.payment_status = ?'; params.push(status); }
+    const totalsParams = [];
+    if (from)     { query += ' AND i.date >= ?'; totalsQuery += ' AND date >= ?'; params.push(from); totalsParams.push(from); }
+    if (to)       { query += ' AND i.date <= ?'; totalsQuery += ' AND date <= ?'; params.push(to); totalsParams.push(to); }
+    if (customer) { query += ' AND i.customer_name LIKE ?'; totalsQuery += ' AND customer_name LIKE ?'; params.push(`%${customer}%`); totalsParams.push(`%${customer}%`); }
+    if (status)   { query += ' AND i.payment_status = ?'; totalsQuery += ' AND payment_status = ?'; params.push(status); totalsParams.push(status); }
     query += ' ORDER BY i.date DESC, i.id DESC';
     const issues = await all(query, params);
-    const totals  = await get(`SELECT COALESCE(SUM(quantity),0) as total_bags, COALESCE(SUM(total_sales),0) as total_sales FROM stock_issues`);
+    const totals  = await get(totalsQuery, totalsParams);
     res.json({ issues, totals });
   } catch (err) { res.status(500).json({ error: 'Server error.' }); }
 });

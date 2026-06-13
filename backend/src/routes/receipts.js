@@ -8,13 +8,15 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const { from, to, supplier } = req.query;
     let query = `SELECT r.*, u.name as created_by_name FROM stock_receipts r LEFT JOIN users u ON r.created_by = u.id WHERE 1=1`;
+    let totalsQuery = `SELECT COALESCE(SUM(quantity),0) as total_bags, COALESCE(SUM(total_cost),0) as total_cost FROM stock_receipts WHERE 1=1`;
     const params = [];
-    if (from)     { query += ' AND r.date >= ?'; params.push(from); }
-    if (to)       { query += ' AND r.date <= ?'; params.push(to); }
-    if (supplier) { query += ' AND r.supplier_name LIKE ?'; params.push(`%${supplier}%`); }
+    const totalsParams = [];
+    if (from)     { query += ' AND r.date >= ?'; totalsQuery += ' AND date >= ?'; params.push(from); totalsParams.push(from); }
+    if (to)       { query += ' AND r.date <= ?'; totalsQuery += ' AND date <= ?'; params.push(to); totalsParams.push(to); }
+    if (supplier) { query += ' AND r.supplier_name LIKE ?'; totalsQuery += ' AND supplier_name LIKE ?'; params.push(`%${supplier}%`); totalsParams.push(`%${supplier}%`); }
     query += ' ORDER BY r.date DESC, r.id DESC';
     const receipts = await all(query, params);
-    const totals   = await get(`SELECT COALESCE(SUM(quantity),0) as total_bags, COALESCE(SUM(total_cost),0) as total_cost FROM stock_receipts`);
+    const totals   = await get(totalsQuery, totalsParams);
     res.json({ receipts, totals });
   } catch (err) { res.status(500).json({ error: 'Server error.' }); }
 });

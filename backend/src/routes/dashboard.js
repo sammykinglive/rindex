@@ -24,11 +24,16 @@ router.get('/', authMiddleware, async (req, res) => {
     const totalCOGSRow     = await get('SELECT COALESCE(SUM(total_cost),0) as v FROM stock_receipts');
 
     const totalIn = totalInRow.v, totalOut = totalOutRow.v;
-    const totalRevenue = totalRevenueRow.v, totalCOGS = totalCOGSRow.v;
+    const totalRevenue = totalRevenueRow.v, totalPurchaseCost = totalCOGSRow.v;
     const balance = totalIn - totalOut;
     const unitPrice = parseFloat(settings.unit_price) || 320;
     const reorderLevel = parseInt(settings.reorder_level) || 50;
     const capacity = parseInt(settings.warehouse_capacity) || 1000;
+
+    // COGS = cost of goods ACTUALLY SOLD, not all goods purchased.
+    // Using weighted-average cost per bag across all receipts, applied to bags sold.
+    const avgCostPerBag = totalIn > 0 ? totalPurchaseCost / totalIn : 0;
+    const totalCOGS = avgCostPerBag * totalOut;
 
     const currentYear = new Date().getFullYear();
     const monthly = [];
@@ -53,6 +58,7 @@ router.get('/', authMiddleware, async (req, res) => {
         total_in: totalIn, total_out: totalOut, balance,
         stock_value: balance * unitPrice,
         total_revenue: totalRevenue, total_cogs: totalCOGS,
+        total_purchase_cost: totalPurchaseCost, avg_cost_per_bag: avgCostPerBag,
         gross_profit: totalRevenue - totalCOGS,
         reorder_alert: balance <= reorderLevel,
         capacity_used: capacity > 0 ? (balance/capacity)*100 : 0,
