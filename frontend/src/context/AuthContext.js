@@ -4,6 +4,46 @@ import { startKeepAlive, stopKeepAlive } from '../utils/keepAlive';
 
 const AuthContext = createContext(null);
 
+// ── Module definitions (single source of truth for the whole app) ─────────────
+export const MODULES = [
+  {
+    key: 'dashboard',
+    label: 'Dashboard',
+    icon: '📊',
+    actions: ['view'],
+  },
+  {
+    key: 'receipts',
+    label: 'Stock Receipts',
+    icon: '📦',
+    actions: ['view', 'create', 'edit', 'delete', 'export'],
+  },
+  {
+    key: 'issues',
+    label: 'Stock Issues',
+    icon: '📤',
+    actions: ['view', 'create', 'edit', 'delete', 'export'],
+  },
+  {
+    key: 'balance',
+    label: 'Stock Balance',
+    icon: '⚖️',
+    actions: ['view', 'export'],
+  },
+  {
+    key: 'expenses',
+    label: 'Expenses',
+    icon: '💸',
+    actions: ['view', 'create', 'edit', 'delete', 'export'],
+  },
+  {
+    key: 'pnl',
+    label: 'P&L Summary',
+    icon: '💰',
+    actions: ['view'],
+  },
+];
+
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
@@ -13,7 +53,7 @@ export function AuthProvider({ children }) {
     const token  = localStorage.getItem('rindex_token');
     if (stored && token) {
       setUser(JSON.parse(stored));
-      startKeepAlive(); // Resume keep-alive on page refresh
+      startKeepAlive();
     }
     setLoading(false);
   }, []);
@@ -23,7 +63,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('rindex_token', res.data.token);
     localStorage.setItem('rindex_user',  JSON.stringify(res.data.user));
     setUser(res.data.user);
-    startKeepAlive(); // Start pinging after login
+    startKeepAlive();
     return res.data.user;
   }
 
@@ -31,11 +71,23 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('rindex_token');
     localStorage.removeItem('rindex_user');
     setUser(null);
-    stopKeepAlive(); // Stop pinging after logout
+    stopKeepAlive();
+  }
+
+  // ── Permission helper: can(module, action) ──────────────────────────────────
+  // Admins always have full access. Staff checked against their permissions object.
+  function can(module, action = 'view') {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    const perms = user.permissions;
+    if (!perms) return false;
+    const modPerms = perms[module];
+    if (!modPerms) return false;
+    return !!modPerms[action];
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, isAdmin: user?.role === 'admin' }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, isAdmin: user?.role === 'admin', can }}>
       {children}
     </AuthContext.Provider>
   );

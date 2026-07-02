@@ -28,8 +28,8 @@ const icons = {
 // ── Stat Card ─────────────────────────────────────────────────────
 function StatCard({ label, value, sub, sub2, iconKey, iconColor, valueColor }) {
   return (
-    <div style={{
-      background: '#fff',
+    <div className="pnl-stat-card" style={{
+      background: 'var(--card)',
       borderRadius: 14,
       padding: '16px 18px',
       border: '1px solid var(--border)',
@@ -73,7 +73,7 @@ function StatCard({ label, value, sub, sub2, iconKey, iconColor, valueColor }) {
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 13px', boxShadow: 'var(--shadow)', fontSize: 13 }}>
+    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 13px', boxShadow: 'var(--shadow)', fontSize: 13 }}>
       <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>{label}</div>
       {payload.map(p => (
         <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -201,10 +201,9 @@ export default function PnL() {
     opex           = allTimeOpEx;
   } else {
     revenue        = monthIss?.totals?.total_sales || 0;
+    cogs           = monthRec?.totals?.total_cost  || 0;
     bags_sold      = monthIss?.totals?.total_bags  || 0;
     bags_purchased = monthRec?.totals?.total_bags  || 0;
-    // COGS matched to bags actually sold this month, using overall weighted-avg cost per bag
-    cogs           = (kpis.avg_cost_per_bag || 0) * bags_sold;
     opex           = monthlyOpEx;
   }
 
@@ -214,11 +213,7 @@ export default function PnL() {
   const netMargin    = revenue > 0 ? (netProfit   / revenue) * 100 : 0;
   const roi          = cogs    > 0 ? (netProfit   / cogs)    * 100 : 0;
   const avg_sell     = bags_sold      > 0 ? revenue / bags_sold      : 0;
-  // avg_cost: weighted-average purchase price per bag (for the relevant period)
-  const monthPurchaseCost = monthRec?.totals?.total_cost || 0;
-  const avg_cost     = mode === 'alltime'
-    ? (kpis.avg_cost_per_bag || 0)
-    : (bags_purchased > 0 ? monthPurchaseCost / bags_purchased : (kpis.avg_cost_per_bag || 0));
+  const avg_cost     = bags_purchased > 0 ? cogs    / bags_purchased : 0;
   const profitPerBag = bags_sold      > 0 ? netProfit / bags_sold    : 0;
 
   // ── Chart data ──────────────────────────────────────────────────
@@ -226,7 +221,12 @@ export default function PnL() {
   const chartData   = monthlyData.map((m, i) => ({
     name:         MONTHS_SHORT[i],
     Revenue:      parseFloat((m.revenue   || 0).toFixed(2)),
-    GrossProfit:  parseFloat(((m.revenue || 0) - (kpis.avg_cost_per_bag || 0) * (m.bags_out || 0)).toFixed(2)),
+    GrossProfit:  parseFloat(((m.revenue || 0) - (
+      // approximate COGS per month proportionally
+      kpis.total_in > 0
+        ? (kpis.total_cogs / kpis.total_in) * (m.bags_in || 0)
+        : 0
+    )).toFixed(2)),
     Expenses:     parseFloat((allExpenses[i] || 0).toFixed(2)),
   }));
 

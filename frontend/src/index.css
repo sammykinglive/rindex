@@ -496,37 +496,111 @@ td { padding: 11px 14px; color: var(--text); vertical-align: middle; }
   --text-light:     #6E7681;
 }
 
-[data-theme="dark"] body { background: var(--bg); color: var(--text); }
-[data-theme="dark"] .card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
-[data-theme="dark"] .nav-item.active { background: rgba(4,201,175,0.12); }
-[data-theme="dark"] .nav-item:hover { background: rgba(255,255,255,0.05); }
-[data-theme="dark"] tbody tr:hover { background: rgba(255,255,255,0.04); }
-[data-theme="dark"] thead th { background: #21262D; color: var(--text-muted); }
-[data-theme="dark"] .form-control { background: #21262D; color: var(--text); border-color: var(--border); }
-[data-theme="dark"] .form-control:focus { border-color: var(--primary); background: #21262D; }
-[data-theme="dark"] .modal-header,
-[data-theme="dark"] .modal-footer { background: var(--card); }
-[data-theme="dark"] .topbar { background: var(--sidebar-bg); border-bottom-color: var(--border); }
-[data-theme="dark"] .sidebar { background: var(--sidebar-bg); border-right-color: var(--sidebar-border); }
-[data-theme="dark"] .user-card:hover { background: rgba(255,255,255,0.05); }
+/* ─── Dark Mode — Layout & Body ───────────────────────────────── */
+[data-theme="dark"] body                    { background: var(--bg); color: var(--text); }
+[data-theme="dark"] .topbar                 { background: var(--sidebar-bg); border-bottom-color: var(--border); }
+[data-theme="dark"] .sidebar               { background: var(--sidebar-bg); border-right-color: var(--sidebar-border); }
+[data-theme="dark"] .sidebar-footer        { border-top-color: var(--sidebar-border); }
+[data-theme="dark"] .sidebar-logo          { border-bottom-color: var(--sidebar-border); }
+[data-theme="dark"] .sidebar-divider       { background: var(--sidebar-border); }
+[data-theme="dark"] .logo-text             { color: var(--text); }
+
+/* ─── Dark Mode — Cards ───────────────────────────────────────── */
+[data-theme="dark"] .card                  { background: var(--card); border-color: var(--border); }
+[data-theme="dark"] .card:hover            { box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+[data-theme="dark"] .card-header          { background: var(--card); border-bottom-color: var(--border); }
+[data-theme="dark"] .kpi-card             { background: var(--card); border-color: var(--border); }
+
+/* ─── Dark Mode — KPI / Stat cards (hardcoded #fff fix) ─────── */
+[data-theme="dark"] [style*="background: '#fff'"],
+[data-theme="dark"] [style*="background: #fff"],
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*='background: "#fff"'] { background: var(--card) !important; }
+
+/* Covers PnL StatCard and similar inline-styled white cards */
+[data-theme="dark"] .card > div[style],
+[data-theme="dark"] div[style*="background: #fff"],
+[data-theme="dark"] div[style*="background:'#fff'"],
+[data-theme="dark"] div[style*='background: "#fff"'] { background: var(--card) !important; color: var(--text) !important; }
+
+/* ─── Dark Mode — Navigation ──────────────────────────────────── */
+[data-theme="dark"] .nav-item              { color: var(--text-muted); }
+[data-theme="dark"] .nav-item:hover        { background: rgba(255,255,255,0.05); color: var(--text); }
+[data-theme="dark"] .nav-item.active       { background: rgba(4,201,175,0.12); color: var(--primary); }
+[data-theme="dark"] .nav-item.active .nav-icon { color: var(--primary); }
+[data-theme="dark"] .nav-icon              { color: var(--text-light); }
+[data-theme="dark"] .user-card:hover       { background: rgba(255,255,255,0.05); }
+[data-theme="dark"] .user-name             { color: var(--text); }
+[data-theme="dark"] .user-role             { color: var(--text-muted); }
+
+/* ─── Dark Mode — Tables ──────────────────────────────────────── */
+[data-theme="dark"] table                  { color: var(--text); }
+[data-theme="dark"] thead th               { background: #21262D; color: var(--text-muted); border-bottom-color: var(--border); }
+[data-theme="dark"] tbody td               { border-bottom-color: var(--border); color: var(--text); }
+[data-theme="dark"] tbody tr:hover         { background: rgba(255,255,255,0.04); }
+[data-theme="dark"] .table-wrap            { background: var(--card); }
+[data-theme="dark"] .tfoot-row td          { background: rgba(4,201,175,0.1); color: var(--primary); border-top-color: var(--primary); }
+
+/* ─── Dark Mode — Forms ───────────────────────────────────────── */
+[data-theme="dark"] .form-control          { background: #21262D; color: var(--text); border-color: var(--border); }
+[data-theme="dark"] .form-control:focus    { border-color: var(--primary); background: #21262D; }
+[data-theme="dark"] .form-control::placeholder { color: var(--text-light); }
+[data-theme="dark"] select.form-control    { background: #21262D; color: var(--text); }
+
+/* ─── Dark Mode — Modals ──────────────────────────────────────── */
+[data-theme="dark"] .modal                 { background: var(--card); border-color: var(--border); }
+[data-theme="dark"] .modal-header          { background: var(--card); border-bottom-color: var(--border); }
+[data-theme="dark"] .modal-footer          { background: var(--card); border-top-color: var(--border); }
+[data-theme="dark"] .modal-body            { background: var(--card); }
+[data-theme="dark"] .modal-overlay         { background: rgba(0,0,0,0.65); }
+
+/* ─── Dark Mode — Buttons ─────────────────────────────────────── */
+[data-theme="dark"] .btn-ghost             { color: var(--text-muted); border-color: var(--border); background: transparent; }
+[data-theme="dark"] .btn-ghost:hover       { background: rgba(255,255,255,0.06); color: var(--text); border-color: var(--border-hover); }
+[data-theme="dark"] .hamburger-btn         { background: var(--card); border-color: var(--border); color: var(--text); }
+[data-theme="dark"] .hamburger-btn:hover   { border-color: var(--primary); color: var(--primary); background: var(--primary-pale); }
+
+/* ─── Dark Mode — Badges ──────────────────────────────────────── */
+[data-theme="dark"] .badge-green   { background: rgba(16,185,129,0.2);  color: #34D399; }
+[data-theme="dark"] .badge-red     { background: rgba(239,68,68,0.2);   color: #F87171; }
+[data-theme="dark"] .badge-gold    { background: rgba(245,158,11,0.2);  color: #FCD34D; }
+[data-theme="dark"] .badge-blue    { background: rgba(96,165,250,0.2);  color: #93C5FD; }
+[data-theme="dark"] .badge-purple  { background: rgba(167,139,250,0.2); color: #C4B5FD; }
+[data-theme="dark"] .badge-teal    { background: rgba(4,201,175,0.2);   color: #04c9af; }
+
+/* ─── Dark Mode — Alerts ──────────────────────────────────────── */
+[data-theme="dark"] .alert-success { background: rgba(16,185,129,0.12); color: #34D399; border-color: rgba(16,185,129,0.3); }
+[data-theme="dark"] .alert-danger  { background: rgba(239,68,68,0.12);  color: #F87171; border-color: rgba(239,68,68,0.3); }
+[data-theme="dark"] .alert-warning { background: rgba(245,158,11,0.12); color: #FCD34D; border-color: rgba(245,158,11,0.3); }
+[data-theme="dark"] .alert-info    { background: rgba(4,201,175,0.12);  color: #04c9af; border-color: rgba(4,201,175,0.3); }
+
+/* ─── Dark Mode — Progress bars ──────────────────────────────── */
 [data-theme="dark"] .progress-bar-wrap { background: #21262D; }
-[data-theme="dark"] .badge-green  { background: rgba(16,185,129,0.2);  color: #34D399; }
-[data-theme="dark"] .badge-red    { background: rgba(239,68,68,0.2);   color: #F87171; }
-[data-theme="dark"] .badge-gold   { background: rgba(245,158,11,0.2);  color: #FCD34D; }
-[data-theme="dark"] .badge-blue   { background: rgba(96,165,250,0.2);  color: #93C5FD; }
-[data-theme="dark"] .badge-purple { background: rgba(167,139,250,0.2); color: #C4B5FD; }
-[data-theme="dark"] .badge-teal   { background: rgba(4,201,175,0.2);   color: #04c9af; }
-[data-theme="dark"] .alert-success { background: rgba(16,185,129,0.12); color: #34D399; }
-[data-theme="dark"] .alert-danger  { background: rgba(239,68,68,0.12);  color: #F87171; }
-[data-theme="dark"] .alert-warning { background: rgba(245,158,11,0.12); color: #FCD34D; }
-[data-theme="dark"] .alert-info    { background: rgba(4,201,175,0.12);  color: #04c9af; }
-[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #30363D; }
-[data-theme="dark"] .tfoot-row td { background: rgba(4,201,175,0.1); color: var(--primary); border-top-color: var(--primary); }
-[data-theme="dark"] .kpi-card { background: var(--card); border-color: var(--border); }
-[data-theme="dark"] .login-right { background: var(--card); }
-[data-theme="dark"] .sidebar-footer { border-top-color: var(--sidebar-border); }
-[data-theme="dark"] .sidebar-logo { border-bottom-color: var(--sidebar-border); }
-[data-theme="dark"] .sidebar-divider { background: var(--sidebar-border); }
+
+/* ─── Dark Mode — Page text ───────────────────────────────────── */
+[data-theme="dark"] .page-title    { color: var(--text); }
+[data-theme="dark"] .page-sub      { color: var(--text-muted); }
+[data-theme="dark"] .card-title    { color: var(--text); }
+[data-theme="dark"] .card-sub      { color: var(--text-muted); }
+[data-theme="dark"] .form-label    { color: var(--text); }
+[data-theme="dark"] .nav-section-label { color: var(--text-light); }
+[data-theme="dark"] .empty-state h3  { color: var(--text); }
+[data-theme="dark"] .empty-state p   { color: var(--text-muted); }
+[data-theme="dark"] .topbar-title    { color: var(--text); }
+[data-theme="dark"] .topbar-badge    { background: var(--bg); color: var(--text-muted); border-color: var(--border); }
+
+/* ─── Dark Mode — Dashboard specific ─────────────────────────── */
+[data-theme="dark"] .kpi-icon-wrap  { background: rgba(255,255,255,0.06) !important; }
+
+/* ─── Dark Mode — PnL StatCard (inline background: #fff fix) ─── */
+[data-theme="dark"] .pnl-stat-card { background: var(--card) !important; border-color: var(--border) !important; }
+
+/* ─── Dark Mode — Login ───────────────────────────────────────── */
+[data-theme="dark"] .login-right   { background: var(--card); }
+
+/* ─── Dark Mode — Scrollbar ───────────────────────────────────── */
+[data-theme="dark"] ::-webkit-scrollbar-thumb  { background: #30363D; }
+[data-theme="dark"] ::-webkit-scrollbar-track  { background: transparent; }
 
 /* Smooth transitions */
 body, .card, .sidebar, .topbar, .modal, .form-control,

@@ -37,7 +37,7 @@ function KpiCard({ label, value, sub, sub2, iconKey, iconColor, valueColor, onCl
 function Tip({ active, payload, label, currency }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 13px', boxShadow: 'var(--shadow)', fontSize: 13 }}>
+    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 13px', boxShadow: 'var(--shadow)', fontSize: 13 }}>
       <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>
       {payload.map(p => (
         <div key={p.name} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
