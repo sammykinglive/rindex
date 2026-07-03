@@ -14,6 +14,7 @@ const NAV = [
   { path: '/balance',   label: 'Stock Balance',  icon: Scale,           moduleKey: 'balance'   },
   { path: '/expenses',  label: 'Expenses',       icon: Receipt,         moduleKey: 'expenses'  },
   { path: '/pnl',       label: 'P&L Summary',   icon: TrendingUp,      moduleKey: 'pnl'       },
+  { path: '/clients',   label: 'Clients',        icon: Users,           moduleKey: 'clients'   },
 ];
 
 const ADMIN_NAV = [

@@ -14,6 +14,7 @@ const DEFAULT_STAFF_PERMISSIONS = {
   balance:    { view: true,  export: false },
   expenses:   { view: false, create: false, edit: false, delete: false, export: false },
   pnl:        { view: false },
+  clients:    { view: true,  create: true,  edit: true,  delete: false },
 };
 
 const ADMIN_PERMISSIONS = {
@@ -23,6 +24,7 @@ const ADMIN_PERMISSIONS = {
   balance:    { view: true,  export: true },
   expenses:   { view: true,  create: true,  edit: true,  delete: true, export: true },
   pnl:        { view: true },
+  clients:    { view: true,  create: true,  edit: true,  delete: true },
 };
 
 // Ensure permissions column exists (idempotent migration)

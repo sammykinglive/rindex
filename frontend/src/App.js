@@ -15,6 +15,7 @@ import Expenses      from './pages/Expenses';
 import PnL           from './pages/PnL';
 import Settings      from './pages/Settings';
 import Users         from './pages/Users';
+import Clients       from './pages/Clients';
 
 const TITLES = {
   '/':          'Dashboard',
@@ -23,6 +24,7 @@ const TITLES = {
   '/balance':   'Stock Balance',
   '/expenses':  'Expenses',
   '/pnl':       'P&L Summary',
+  '/clients':   'Client Management',
   '/settings':  'Settings',
   '/users':     'Manage Users',
 };
@@ -129,6 +131,11 @@ function AppShell() {
             <Route path="/pnl" element={
               <PermissionRoute moduleKey="pnl">
                 <PnL />
+              </PermissionRoute>
+            } />
+            <Route path="/clients" element={
+              <PermissionRoute moduleKey="clients">
+                <Clients />
               </PermissionRoute>
             } />
             <Route path="/settings" element={<ProtectedRoute adminOnly><Settings /></ProtectedRoute>} />

@@ -42,6 +42,12 @@ export const MODULES = [
     icon: '💰',
     actions: ['view'],
   },
+  {
+    key: 'clients',
+    label: 'Client Management',
+    icon: '👥',
+    actions: ['view', 'create', 'edit', 'delete'],
+  },
 ];
 
 export function AuthProvider({ children }) {

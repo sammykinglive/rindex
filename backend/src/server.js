@@ -7,6 +7,7 @@ const authRoutes      = require('./routes/auth');
 const receiptsRoutes  = require('./routes/receipts');
 const issuesRoutes    = require('./routes/issues');
 const dashboardRoutes = require('./routes/dashboard');
+const clientsRoutes   = require('./routes/clients');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,6 +32,7 @@ app.use('/api/auth',      authRoutes);
 app.use('/api/receipts',  receiptsRoutes);
 app.use('/api/issues',    issuesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/clients',   clientsRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'Rindex API running ✅' }));
 
