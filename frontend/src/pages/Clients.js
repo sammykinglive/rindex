@@ -497,6 +497,16 @@ function ClientProfile({ clientId, onClose, onEdit, onDelete, allRanked }) {
   );
 }
 
+// ── Form field wrapper — defined OUTSIDE modal so it never remounts ───────────
+function F({ label, children }) {
+  return (
+    <div className="form-group">
+      <label className="form-label">{label}</label>
+      {children}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // CLIENT FORM MODAL
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -516,13 +526,6 @@ function ClientModal({ client, onClose, onSaved }) {
     } catch (err) { toast.error(err.response?.data?.error || 'Error saving client.'); }
     finally { setSaving(false); }
   }
-
-  const F = ({ label, children }) => (
-    <div className="form-group">
-      <label className="form-label">{label}</label>
-      {children}
-    </div>
-  );
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
