@@ -1,28 +1,28 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Plus, Search, X, Edit2, Trash2, Eye, ChevronDown, ChevronUp,
-  Phone, Mail, MapPin, User, Building2, Tag, Star, TrendingUp,
-  TrendingDown, AlertCircle, Download, FileText, BarChart2,
-  MessageSquare, Calendar, Award, RefreshCw, Filter,
+  Plus, Search, X, Edit2, Trash2, ChevronDown, ChevronUp,
+  Phone, Mail, MapPin, User, Building2, TrendingUp, TrendingDown,
+  AlertCircle, FileText, BarChart2, Users, RefreshCw, Filter,
+  Award, MessageSquare, Package, DollarSign, ShoppingCart, Clock,
+  Shield, Star, Activity,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend,
+  LineChart, Line,
 } from 'recharts';
 import api from '../utils/api';
-import { fmt, MONTHS } from '../utils/format';
+import { fmt } from '../utils/format';
 import toast from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const CATEGORIES   = ['Corporate', 'Retail', 'Wholesale', 'Traditional Market'];
+const CATEGORIES   = ['Corporate','Retail','Wholesale','Traditional Market'];
 const REGIONS_GH   = ['Greater Accra','Ashanti','Western','Eastern','Central','Volta','Northern','Upper East','Upper West','Brong-Ahafo','Oti','Savannah','North East','Western North','Ahafo','Bono East'];
 const PAYMENT_OPTS = ['Cash','Credit','Mobile Money','Bank Transfer','Cheque'];
 const NOTE_TYPES   = ['General','Meeting','Follow-up','Complaint','Preference','Pricing','Credit'];
 const STATUS_OPTS  = ['Active','Inactive'];
 const CAT_COLORS   = { Corporate:'#8B5CF6', Retail:'#02A793', Wholesale:'#3B82F6', 'Traditional Market':'#F97316' };
 const PIE_COLORS   = ['#02A793','#8B5CF6','#3B82F6','#F97316','#10B981','#EF4444'];
-
 const EMPTY_CLIENT = {
   name:'', company_name:'', category:'Retail', contact_person:'',
   phone:'', phone2:'', email:'', address:'', city:'', region:'',
@@ -30,94 +30,109 @@ const EMPTY_CLIENT = {
   payment_terms:'Cash', status:'Active', notes:'',
 };
 
-// ── Tooltip ───────────────────────────────────────────────────────────────────
+// ── Chart Tooltip ──────────────────────────────────────────────────────────────
 function ChartTip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:10, padding:'9px 13px', fontSize:13 }}>
-      <div style={{ fontWeight:700, marginBottom:4, color:'var(--text)' }}>{label}</div>
+    <div style={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:10, padding:'10px 14px', fontSize:12.5, boxShadow:'var(--shadow)' }}>
+      <div style={{ fontWeight:700, marginBottom:6, color:'var(--text)', borderBottom:'1px solid var(--border)', paddingBottom:4 }}>{label}</div>
       {payload.map(p => (
-        <div key={p.name} style={{ display:'flex', alignItems:'center', gap:7, marginBottom:2 }}>
-          <span style={{ width:8, height:8, borderRadius:'50%', background:p.color, display:'inline-block' }} />
-          <span style={{ color:'var(--text-muted)' }}>{p.name}:</span>
-          <span style={{ fontWeight:700 }}>{p.name.includes('Rev') || p.name === 'Revenue' ? fmt.currency(p.value) : fmt.number(p.value)}</span>
+        <div key={p.name} style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
+          <span style={{ width:8, height:8, borderRadius:2, background:p.color, display:'inline-block', flexShrink:0 }}/>
+          <span style={{ color:'var(--text-muted)', minWidth:55 }}>{p.name}:</span>
+          <span style={{ fontWeight:700, color:'var(--text)' }}>
+            {p.name.toLowerCase().includes('rev') ? fmt.currency(p.value) : fmt.number(p.value)}
+          </span>
         </div>
       ))}
     </div>
   );
 }
 
-// ── KPI Card ──────────────────────────────────────────────────────────────────
+// ── KPI Card — icon top, clean vertical stack ─────────────────────────────────
 function KpiCard({ icon: Icon, label, value, sub, color }) {
   return (
-    <div className="kpi-card" style={{ minWidth:0 }}>
-      <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
-        <div className="kpi-icon-wrap" style={{ background: color + '18', flexShrink:0 }}>
-          <Icon size={18} color={color} />
-        </div>
-        <div style={{ minWidth:0, flex:1 }}>
-          <div className="kpi-label">{label}</div>
-          <div className="kpi-value" style={{ fontSize:17, marginTop:4 }}>{value}</div>
-          {sub && <div className="kpi-sub" style={{ marginTop:4 }}>{sub}</div>}
-        </div>
+    <div style={{
+      background:'var(--card)', border:'1px solid var(--border)',
+      borderRadius:'var(--radius)', padding:'18px 20px',
+      boxShadow:'var(--shadow)', display:'flex', flexDirection:'column', gap:8,
+      transition:'box-shadow 0.2s, transform 0.2s',
+    }}
+      onMouseEnter={e=>{ e.currentTarget.style.boxShadow='var(--shadow-hover)'; e.currentTarget.style.transform='translateY(-2px)'; }}
+      onMouseLeave={e=>{ e.currentTarget.style.boxShadow='var(--shadow)'; e.currentTarget.style.transform='none'; }}
+    >
+      <div style={{ width:38, height:38, borderRadius:10, background:color+'18', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <Icon size={18} color={color} strokeWidth={2}/>
       </div>
+      <div style={{ fontSize:10.5, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.6px', lineHeight:1.3 }}>{label}</div>
+      <div style={{ fontSize:20, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px', lineHeight:1, wordBreak:'break-word' }}>{value}</div>
+      {sub && <div style={{ fontSize:11.5, color:'var(--text-muted)', lineHeight:1.4 }}>{sub}</div>}
     </div>
   );
 }
 
-// ── Badge ─────────────────────────────────────────────────────────────────────
+// ── Badges ─────────────────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
-  return <span className={`badge ${status === 'Active' ? 'badge-green' : 'badge-red'}`}>{status}</span>;
+  return <span className={`badge ${status==='Active'?'badge-green':'badge-red'}`}>{status}</span>;
 }
 function CatBadge({ cat }) {
-  const color = CAT_COLORS[cat] || 'var(--primary)';
-  return (
-    <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99, background: color+'18', color, border:`1px solid ${color}30`, whiteSpace:'nowrap' }}>
-      {cat}
-    </span>
-  );
+  const c = CAT_COLORS[cat]||'var(--primary)';
+  return <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99, background:c+'18', color:c, border:`1px solid ${c}30`, whiteSpace:'nowrap' }}>{cat}</span>;
 }
 
-// ── Avatar ────────────────────────────────────────────────────────────────────
-function Avatar({ name, size = 34, color }) {
-  const initials = name?.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) || '??';
-  const bg = color || CAT_COLORS['Retail'];
+// ── Avatar ─────────────────────────────────────────────────────────────────────
+function Avatar({ name, size=34, color }) {
+  const bg = color||CAT_COLORS['Retail'];
   return (
     <div style={{ width:size, height:size, borderRadius:'50%', background:bg+'22', border:`2px solid ${bg}44`, display:'flex', alignItems:'center', justifyContent:'center', color:bg, fontWeight:800, fontSize:size*0.34, flexShrink:0 }}>
-      {initials}
+      {name?.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)||'??'}
     </div>
   );
 }
 
-// ── Sparkline mini bar chart ──────────────────────────────────────────────────
-function Sparkline({ data }) {
-  if (!data || data.length === 0) return <span style={{ color:'var(--text-muted)', fontSize:12 }}>No data</span>;
-  const max = Math.max(...data.map(d=>d.revenue), 1);
+// ── Tab Toggle ─────────────────────────────────────────────────────────────────
+function TabToggle({ options, value, onChange }) {
   return (
-    <div style={{ display:'flex', alignItems:'flex-end', gap:2, height:28 }}>
-      {data.slice(-6).map((d,i) => (
-        <div key={i} style={{ flex:1, height: Math.max((d.revenue/max)*28, 2), background:'var(--primary)', borderRadius:2, opacity:0.6+i*0.07 }} title={`${d.month}: ${fmt.currency(d.revenue)}`} />
+    <div style={{ display:'flex', background:'var(--bg)', border:'1.5px solid var(--border)', borderRadius:8, padding:2, gap:2 }}>
+      {options.map(o => (
+        <button key={o.key} onClick={()=>onChange(o.key)} style={{
+          padding:'5px 13px', borderRadius:6, border:'none', cursor:'pointer',
+          fontFamily:'var(--font)', fontSize:12, fontWeight:600,
+          background: value===o.key ? 'var(--primary)' : 'transparent',
+          color: value===o.key ? '#fff' : 'var(--text-muted)', transition:'all 0.15s',
+        }}>{o.label}</button>
       ))}
     </div>
   );
 }
 
+// ── Stat mini card ─────────────────────────────────────────────────────────────
+function StatMini({ label, value, color }) {
+  return (
+    <div style={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:10, padding:'11px 14px' }}>
+      <div style={{ fontSize:10.5, color:'var(--text-muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.3px', marginBottom:5 }}>{label}</div>
+      <div style={{ fontSize:16, fontWeight:800, color:color||'var(--text)' }}>{value}</div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// CLIENT PROFILE PANEL
+// EXPANDED CLIENT PROFILE ROW
 // ═══════════════════════════════════════════════════════════════════════════════
-function ClientProfile({ clientId, onClose, onEdit, onDelete, allRanked }) {
-  const { user } = useAuth();
-  const [data, setData]         = useState(null);
-  const [loading, setLoading]   = useState(true);
+function ClientProfileRow({ clientId, onEdit, onDelete, allRanked, kpis }) {
+  const [data, setData]           = useState(null);
+  const [loading, setLoading]     = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const [noteText, setNoteText] = useState('');
-  const [noteType, setNoteType] = useState('General');
+  const [orderPeriod, setOrderPeriod] = useState('alltime');
+  const [noteText, setNoteText]   = useState('');
+  const [noteType, setNoteType]   = useState('General');
   const [addingNote, setAddingNote] = useState(false);
-  const [trendPeriod, setTrendPeriod] = useState('monthly');
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get(`/clients/${clientId}`).then(r => { setData(r.data); setLoading(false); }).catch(() => setLoading(false));
+    api.get(`/clients/${clientId}`)
+      .then(r => { setData(r.data); setLoading(false); })
+      .catch(() => setLoading(false));
   }, [clientId]);
 
   useEffect(() => { load(); }, [load]);
@@ -141,363 +156,452 @@ function ClientProfile({ clientId, onClose, onEdit, onDelete, allRanked }) {
   }
 
   if (loading || !data) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:400 }}>
-      <div style={{ width:36, height:36, border:'3px solid var(--primary-pale)', borderTopColor:'var(--primary)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
-    </div>
+    <tr>
+      <td colSpan={9} style={{ padding:28, background:'var(--bg)', borderBottom:'2px solid var(--border)' }}>
+        <div style={{ display:'flex', justifyContent:'center' }}>
+          <div style={{ width:28, height:28, border:'3px solid var(--primary-pale)', borderTopColor:'var(--primary)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
+        </div>
+      </td>
+    </tr>
   );
 
   const { client, lifetime, thisMonth, lastMonth, monthlyTrend, purchases, notes, revenueRank, bagsRank, totalClients, avgDaysBetween, revGrowth } = data;
-  const color = CAT_COLORS[client.category] || 'var(--primary)';
+  const color = CAT_COLORS[client.category]||'var(--primary)';
 
-  // Revenue rank among all clients for display
-  const revenueShare = allRanked && allRanked.length > 0
-    ? ((lifetime?.revenue || 0) / allRanked.reduce((s,r) => s + (r.revenue||0), 0)) * 100 : 0;
+  const revenueShare = allRanked?.length > 0
+    ? ((lifetime?.revenue||0) / allRanked.reduce((s,r)=>s+(r.revenue||0),0)) * 100 : 0;
 
   // Chart data
-  const trendData = (monthlyTrend || []).map(m => ({
-    name: m.month.slice(5), bags: m.bags, Revenue: m.revenue, orders: m.orders,
+  const trendData = (monthlyTrend||[]).map(m => ({
+    name: new Date(m.month+'-01').toLocaleDateString('en-GH',{month:'short',year:'2-digit'}),
+    Bags: m.bags, Revenue: m.revenue, Orders: m.orders,
   }));
 
-  const TABS = ['overview','purchases','analytics','notes'];
+  // Period stats for orders tab
+  const periodStats = orderPeriod === 'alltime' ? {
+    orders: lifetime?.orders||0, bags: lifetime?.bags||0,
+    revenue: lifetime?.revenue||0, avgValue: lifetime?.avg_value||0,
+    avgBags: lifetime?.avg_bags||0, largest: lifetime?.largest_order||0,
+  } : {
+    orders: thisMonth?.orders||0, bags: thisMonth?.bags||0,
+    revenue: thisMonth?.revenue||0,
+    avgValue: thisMonth?.orders ? (thisMonth.revenue/thisMonth.orders) : 0,
+    avgBags:  thisMonth?.orders ? (thisMonth.bags/thisMonth.orders)    : 0,
+    largest: 0,
+  };
+
+  const filteredPurchases = orderPeriod === 'alltime'
+    ? (purchases||[])
+    : (purchases||[]).filter(p => p.date.slice(0,7) === new Date().toISOString().slice(0,7));
+
+  const TABS = [
+    { key:'overview',  label:'Overview',  icon: User },
+    { key:'orders',    label:'Orders',    icon: ShoppingCart },
+    { key:'analytics', label:'Analytics', icon: Activity },
+    { key:'notes',     label:`Notes${notes?.length ? ` (${notes.length})` : ''}`, icon: MessageSquare },
+  ];
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden' }}>
+    <tr>
+      <td colSpan={9} style={{ padding:0, background:'var(--bg)', borderBottom:`3px solid ${color}55` }}>
 
-      {/* ── Profile Header ─────────────────────────────────────────── */}
-      <div style={{ background:`linear-gradient(135deg, ${color}22 0%, var(--card) 100%)`, borderBottom:'1px solid var(--border)', padding:'20px 24px', flexShrink:0 }}>
-        <div style={{ display:'flex', alignItems:'flex-start', gap:14 }}>
-          <Avatar name={client.name} size={52} color={color} />
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
-              <h2 style={{ fontSize:18, fontWeight:800, color:'var(--text)', margin:0 }}>{client.name}</h2>
-              <StatusBadge status={client.status} />
+        {/* ── Profile Header ─────────────────────────────────────────── */}
+        <div style={{
+          background:`linear-gradient(135deg, ${color}10 0%, var(--bg) 60%)`,
+          borderTop:`3px solid ${color}`,
+          padding:'18px 24px 14px',
+          display:'flex', alignItems:'flex-start', gap:16, flexWrap:'wrap',
+        }}>
+          <Avatar name={client.name} size={50} color={color}/>
+          <div style={{ flex:1, minWidth:200 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:5 }}>
+              <span style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>{client.name}</span>
+              <StatusBadge status={client.status}/>
+              <CatBadge cat={client.category}/>
+              <span style={{ fontSize:11, color:'var(--text-muted)', fontFamily:'monospace', background:'var(--card)', border:'1px solid var(--border)', borderRadius:5, padding:'1px 6px' }}>{client.client_code}</span>
             </div>
-            {client.company_name && <div style={{ fontSize:13, color:'var(--text-muted)', marginTop:2 }}>{client.company_name}</div>}
-            <div style={{ display:'flex', gap:8, marginTop:6, flexWrap:'wrap' }}>
-              <CatBadge cat={client.category} />
-              <span style={{ fontSize:12, color:'var(--text-muted)', fontFamily:'monospace' }}>{client.client_code}</span>
-              {revenueRank && <span style={{ fontSize:12, color:'var(--gold)', fontWeight:700 }}>#{revenueRank} of {totalClients} by revenue</span>}
+            {client.company_name && <div style={{ fontSize:13, color:'var(--text-muted)', marginBottom:6 }}>{client.company_name}</div>}
+            {/* Quick stat strip */}
+            <div style={{ display:'flex', flexWrap:'wrap', gap:16 }}>
+              {[
+                [DollarSign, fmt.currency(lifetime?.revenue||0),             'Revenue',       color],
+                [ShoppingCart, lifetime?.orders||0,                          'Orders',        'var(--blue)'],
+                [Package, `${fmt.number(lifetime?.bags||0)} bags`,           'Volume',        'var(--green)'],
+                [Clock, fmt.date(lifetime?.last_date)||'Never',              'Last Purchase', 'var(--text-muted)'],
+              ].map(([Icon, val, lbl, c]) => (
+                <div key={lbl} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                  <Icon size={12} style={{ color:c, flexShrink:0 }}/>
+                  <span style={{ fontSize:12, color:'var(--text-muted)' }}>{lbl}:</span>
+                  <span style={{ fontSize:12.5, fontWeight:700, color:c }}>{val}</span>
+                </div>
+              ))}
+              {revenueRank && (
+                <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                  <Award size={12} style={{ color:'var(--gold)' }}/>
+                  <span style={{ fontSize:12.5, fontWeight:700, color:'var(--gold)' }}>Ranked #{revenueRank} of {totalClients}</span>
+                </div>
+              )}
             </div>
           </div>
-          <div style={{ display:'flex', gap:8, flexShrink:0 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => onEdit(client)}><Edit2 size={14}/></button>
-            <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={() => { onDelete(client.id, client.name); onClose(); }}><Trash2 size={14}/></button>
-            <button className="btn btn-ghost btn-sm" onClick={onClose}><X size={16}/></button>
+          <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+            <button className="btn btn-ghost btn-sm" onClick={()=>onEdit(client)}><Edit2 size={13}/> Edit</button>
+            <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={()=>onDelete(client.id,client.name)}><Trash2 size={13}/></button>
           </div>
         </div>
 
-        {/* Quick stats strip */}
-        <div style={{ display:'flex', gap:20, marginTop:16, flexWrap:'wrap' }}>
-          {[
-            ['Total Revenue', fmt.currency(lifetime?.revenue || 0), color],
-            ['Total Orders',  fmt.number(lifetime?.orders || 0),    'var(--blue)'],
-            ['Total Bags',    fmt.number(lifetime?.bags || 0)+'  bags', 'var(--green)'],
-            ['Last Purchase', fmt.date(lifetime?.last_date),         'var(--text-muted)'],
-          ].map(([lbl, val, c]) => (
-            <div key={lbl}>
-              <div style={{ fontSize:10.5, fontWeight:600, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.5px' }}>{lbl}</div>
-              <div style={{ fontSize:14, fontWeight:800, color:c, marginTop:2 }}>{val}</div>
-            </div>
+        {/* ── Tabs ───────────────────────────────────────────────────── */}
+        <div style={{ display:'flex', borderBottom:'1px solid var(--border)', background:'var(--card)', paddingLeft:8, overflowX:'auto' }}>
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button key={key} onClick={()=>setActiveTab(key)} style={{
+              display:'flex', alignItems:'center', gap:6,
+              padding:'10px 18px', border:'none', cursor:'pointer', background:'none',
+              fontFamily:'var(--font)', fontWeight:600, fontSize:12.5,
+              color: activeTab===key ? 'var(--primary)' : 'var(--text-muted)',
+              borderBottom: activeTab===key ? '2px solid var(--primary)' : '2px solid transparent',
+              transition:'all 0.15s', whiteSpace:'nowrap', flexShrink:0,
+            }}>
+              <Icon size={13}/> {label}
+            </button>
           ))}
         </div>
-      </div>
 
-      {/* ── Tabs ───────────────────────────────────────────────────── */}
-      <div style={{ display:'flex', gap:0, borderBottom:'1px solid var(--border)', background:'var(--card)', flexShrink:0, overflowX:'auto' }}>
-        {TABS.map(t => (
-          <button key={t} onClick={() => setActiveTab(t)} style={{
-            padding:'11px 18px', border:'none', cursor:'pointer', background:'none',
-            fontFamily:'var(--font)', fontWeight:600, fontSize:13,
-            color: activeTab===t ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: activeTab===t ? '2px solid var(--primary)' : '2px solid transparent',
-            transition:'all 0.15s', whiteSpace:'nowrap', textTransform:'capitalize',
-          }}>
-            {t === 'notes' ? `Notes (${notes?.length||0})` : t.charAt(0).toUpperCase()+t.slice(1)}
-          </button>
-        ))}
-      </div>
+        {/* ── Tab Content ────────────────────────────────────────────── */}
+        <div style={{ padding:'22px 24px' }}>
 
-      {/* ── Tab Content ────────────────────────────────────────────── */}
-      <div style={{ flex:1, overflowY:'auto', padding:'20px 24px' }}>
+          {/* ─ OVERVIEW ─ */}
+          {activeTab === 'overview' && (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:16 }}>
 
-        {/* ─ OVERVIEW ─ */}
-        {activeTab === 'overview' && (
-          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-
-            {/* Contact Info */}
-            <div className="card" style={{ marginBottom:0 }}>
-              <div className="card-header"><span className="card-title">Contact Information</span></div>
-              <div className="card-body">
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              {/* Contact info */}
+              <div className="card" style={{ marginBottom:0 }}>
+                <div className="card-header"><span className="card-title">Contact Information</span></div>
+                <div className="card-body" style={{ display:'flex', flexDirection:'column', gap:11 }}>
                   {[
-                    [Phone, 'Phone', client.phone || '—'],
-                    [Phone, 'Phone 2', client.phone2 || '—'],
-                    [Mail,  'Email',   client.email || '—'],
-                    [User,  'Contact', client.contact_person || '—'],
-                    [MapPin,'Address', [client.address, client.city, client.region].filter(Boolean).join(', ') || '—'],
-                    [MapPin,'GPS',     client.gps_address || '—'],
-                    [Building2,'Tax ID', client.tax_id || '—'],
-                    [User,  'Sales Rep', client.sales_rep || '—'],
+                    [Phone,    'Primary Phone',   client.phone||'—'],
+                    [Phone,    'Secondary Phone', client.phone2||'—'],
+                    [Mail,     'Email',            client.email||'—'],
+                    [User,     'Contact Person',   client.contact_person||'—'],
+                    [MapPin,   'Address',          [client.address,client.city,client.region].filter(Boolean).join(', ')||'—'],
+                    [MapPin,   'GPS Address',      client.gps_address||'—'],
+                    [Building2,'Tax ID',           client.tax_id||'—'],
+                    [User,     'Sales Rep',        client.sales_rep||'—'],
                   ].map(([Icon, lbl, val]) => (
-                    <div key={lbl} style={{ display:'flex', gap:8, alignItems:'flex-start' }}>
-                      <Icon size={13} style={{ color:'var(--text-muted)', marginTop:3, flexShrink:0 }} />
-                      <div>
-                        <div style={{ fontSize:10.5, color:'var(--text-muted)', fontWeight:600 }}>{lbl}</div>
-                        <div style={{ fontSize:13, color:'var(--text)', fontWeight:500 }}>{val}</div>
+                    <div key={lbl} style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
+                      <Icon size={13} style={{ color:'var(--text-muted)', marginTop:3, flexShrink:0 }}/>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontSize:10, color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.3px' }}>{lbl}</div>
+                        <div style={{ fontSize:13, color:'var(--text)', wordBreak:'break-word' }}>{val}</div>
                       </div>
                     </div>
                   ))}
-                </div>
-                <div style={{ borderTop:'1px solid var(--border)', marginTop:12, paddingTop:12, display:'flex', gap:16, flexWrap:'wrap' }}>
-                  <div><span style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600 }}>PAYMENT TERMS</span><div style={{ fontWeight:700, color:'var(--text)' }}>{client.payment_terms}</div></div>
-                  <div><span style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600 }}>CREDIT LIMIT</span><div style={{ fontWeight:700, color:'var(--text)' }}>{client.credit_limit > 0 ? fmt.currency(client.credit_limit) : 'None'}</div></div>
-                </div>
-              </div>
-            </div>
-
-            {/* This month vs last */}
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-              <div className="card" style={{ marginBottom:0 }}>
-                <div className="card-header"><span className="card-title" style={{ fontSize:12 }}>This Month</span></div>
-                <div className="card-body" style={{ paddingTop:10 }}>
-                  <div style={{ fontSize:20, fontWeight:800, color:'var(--primary)' }}>{fmt.currency(thisMonth?.revenue||0)}</div>
-                  <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:4 }}>{fmt.number(thisMonth?.bags||0)} bags · {thisMonth?.orders||0} orders</div>
-                </div>
-              </div>
-              <div className="card" style={{ marginBottom:0 }}>
-                <div className="card-header"><span className="card-title" style={{ fontSize:12 }}>vs Last Month</span></div>
-                <div className="card-body" style={{ paddingTop:10 }}>
-                  <div style={{ fontSize:20, fontWeight:800, color: revGrowth >= 0 ? 'var(--green)' : 'var(--red)', display:'flex', alignItems:'center', gap:6 }}>
-                    {revGrowth >= 0 ? <TrendingUp size={18}/> : <TrendingDown size={18}/>}
-                    {fmt.percent(Math.abs(revGrowth))}
-                  </div>
-                  <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:4 }}>Prev: {fmt.currency(lastMonth?.revenue||0)}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Lifetime stats */}
-            <div className="card" style={{ marginBottom:0 }}>
-              <div className="card-header"><span className="card-title">Lifetime Summary</span></div>
-              <div className="card-body">
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
-                  {[
-                    ['Total Revenue', fmt.currency(lifetime?.revenue||0), 'var(--primary)'],
-                    ['Total Bags', fmt.number(lifetime?.bags||0), 'var(--blue)'],
-                    ['Total Orders', lifetime?.orders||0, 'var(--purple)'],
-                    ['Avg Order Value', fmt.currency(lifetime?.avg_value||0), 'var(--green)'],
-                    ['Avg Bags/Order', fmt.number(lifetime?.avg_bags||0), 'var(--orange)'],
-                    ['Largest Order', fmt.currency(lifetime?.largest_order||0), 'var(--gold)'],
-                  ].map(([lbl,val,c]) => (
-                    <div key={lbl} style={{ textAlign:'center', padding:'10px 0' }}>
-                      <div style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.4px' }}>{lbl}</div>
-                      <div style={{ fontSize:15, fontWeight:800, color:c, marginTop:4 }}>{val}</div>
+                  <div style={{ borderTop:'1px solid var(--border)', paddingTop:10, marginTop:2, display:'flex', gap:20, flexWrap:'wrap' }}>
+                    <div>
+                      <div style={{ fontSize:10, color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase' }}>Payment Terms</div>
+                      <div style={{ fontWeight:700, color:'var(--text)', fontSize:13 }}>{client.payment_terms}</div>
                     </div>
-                  ))}
-                </div>
-                <div style={{ borderTop:'1px solid var(--border)', marginTop:12, paddingTop:12, display:'flex', gap:20, flexWrap:'wrap', fontSize:12 }}>
-                  <div><span style={{ color:'var(--text-muted)' }}>First Purchase: </span><strong>{fmt.date(lifetime?.first_date)}</strong></div>
-                  <div><span style={{ color:'var(--text-muted)' }}>Last Purchase: </span><strong>{fmt.date(lifetime?.last_date)}</strong></div>
-                  {avgDaysBetween && <div><span style={{ color:'var(--text-muted)' }}>Avg days between orders: </span><strong>{avgDaysBetween} days</strong></div>}
-                  {revenueRank && <div><span style={{ color:'var(--text-muted)' }}>Revenue rank: </span><strong style={{ color:'var(--gold)' }}>#{revenueRank} of {totalClients}</strong></div>}
-                  {bagsRank && <div><span style={{ color:'var(--text-muted)' }}>Volume rank: </span><strong style={{ color:'var(--blue)' }}>#{bagsRank} of {totalClients}</strong></div>}
-                  <div><span style={{ color:'var(--text-muted)' }}>Revenue share: </span><strong>{fmt.percent(revenueShare)}</strong></div>
+                    <div>
+                      <div style={{ fontSize:10, color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase' }}>Credit Limit</div>
+                      <div style={{ fontWeight:700, color:'var(--text)', fontSize:13 }}>{client.credit_limit>0?fmt.currency(client.credit_limit):'None'}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* General notes */}
-            {client.notes && (
+              {/* Lifetime stats */}
               <div className="card" style={{ marginBottom:0 }}>
-                <div className="card-header"><span className="card-title">Client Notes</span></div>
-                <div className="card-body"><p style={{ fontSize:13, color:'var(--text)', lineHeight:1.6, margin:0 }}>{client.notes}</p></div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ─ PURCHASES ─ */}
-        {activeTab === 'purchases' && (
-          <div>
-            <div style={{ marginBottom:12, fontSize:13, color:'var(--text-muted)' }}>
-              {purchases?.length || 0} total transaction{(purchases?.length||0) !== 1 ? 's' : ''}
-            </div>
-            {(!purchases || purchases.length === 0) ? (
-              <div className="empty-state"><div className="empty-state-icon">🧾</div><h3>No purchases yet</h3><p>Transactions will appear here once recorded.</p></div>
-            ) : (
-              <div className="table-wrap" style={{ borderRadius:10, overflow:'hidden' }}>
-                <table>
-                  <thead>
-                    <tr><th>Date</th><th>Invoice</th><th>Qty</th><th>Unit Price</th><th>Total</th><th>Method</th><th>Status</th></tr>
-                  </thead>
-                  <tbody>
-                    {purchases.map(p => (
-                      <tr key={p.id}>
-                        <td style={{ whiteSpace:'nowrap', fontSize:12, color:'var(--text-muted)' }}>{fmt.date(p.date)}</td>
-                        <td style={{ fontSize:12, fontFamily:'monospace', color:'var(--primary)' }}>{p.invoice_number}</td>
-                        <td style={{ fontWeight:700 }}>{fmt.number(p.quantity)} bags</td>
-                        <td style={{ fontSize:12.5 }}>{fmt.currency(p.selling_price)}</td>
-                        <td style={{ fontWeight:800, color:'var(--primary)' }}>{fmt.currency(p.total_sales)}</td>
-                        <td><span className="badge badge-blue" style={{ fontSize:10 }}>{p.payment_method}</span></td>
-                        <td><span className={`badge ${p.payment_status==='Paid' ? 'badge-green' : 'badge-red'}`} style={{ fontSize:10 }}>{p.payment_status}</span></td>
-                      </tr>
+                <div className="card-header"><span className="card-title">Lifetime Performance</span></div>
+                <div className="card-body">
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    {[
+                      ['Total Revenue',  fmt.currency(lifetime?.revenue||0),     color],
+                      ['Total Orders',   lifetime?.orders||0,                    'var(--blue)'],
+                      ['Total Bags',     fmt.number(lifetime?.bags||0),          'var(--green)'],
+                      ['Avg Order Value',fmt.currency(lifetime?.avg_value||0),   'var(--purple)'],
+                      ['Avg Bags/Order', fmt.number(lifetime?.avg_bags||0),      'var(--orange)'],
+                      ['Largest Order',  fmt.currency(lifetime?.largest_order||0),'var(--gold)'],
+                    ].map(([lbl,val,c])=>(
+                      <div key={lbl} style={{ padding:'9px 0', borderBottom:'1px solid var(--border)' }}>
+                        <div style={{ fontSize:10, color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.3px' }}>{lbl}</div>
+                        <div style={{ fontSize:15, fontWeight:800, color:c, marginTop:3 }}>{val}</div>
+                      </div>
                     ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="tfoot-row">
-                      <td colSpan={2} style={{ fontWeight:700 }}>TOTAL</td>
-                      <td style={{ fontWeight:800 }}>{fmt.number(lifetime?.bags||0)} bags</td>
-                      <td></td>
-                      <td style={{ fontWeight:800 }}>{fmt.currency(lifetime?.revenue||0)}</td>
-                      <td colSpan={2}></td>
-                    </tr>
-                  </tfoot>
-                </table>
+                  </div>
+                  <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:4 }}>
+                    <div style={{ fontSize:12, color:'var(--text-muted)' }}>
+                      First purchase: <strong style={{ color:'var(--text)' }}>{fmt.date(lifetime?.first_date)||'—'}</strong>
+                    </div>
+                    <div style={{ fontSize:12, color:'var(--text-muted)' }}>
+                      Last purchase: <strong style={{ color:'var(--text)' }}>{fmt.date(lifetime?.last_date)||'—'}</strong>
+                    </div>
+                    {avgDaysBetween && (
+                      <div style={{ fontSize:12, color:'var(--text-muted)' }}>
+                        Avg days between orders: <strong style={{ color:'var(--text)' }}>{avgDaysBetween}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* ─ ANALYTICS ─ */}
-        {activeTab === 'analytics' && (
-          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-            {trendData.length === 0 ? (
-              <div className="empty-state"><div className="empty-state-icon">📈</div><h3>No transaction data yet</h3><p>Charts will appear once purchases are recorded.</p></div>
-            ) : (
-              <>
+              {/* Month comparison + ranking */}
+              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                 <div className="card" style={{ marginBottom:0 }}>
-                  <div className="card-header"><span className="card-title">Revenue Trend</span></div>
+                  <div className="card-header"><span className="card-title">This Month vs Last</span></div>
                   <div className="card-body">
-                    <ResponsiveContainer width="100%" height={160}>
-                      <AreaChart data={trendData} margin={{ top:4, right:4, left:0, bottom:0 }}>
-                        <defs>
-                          <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="var(--primary)" stopOpacity={0.15}/>
-                            <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
-                        <XAxis dataKey="name" tick={{ fontSize:10, fill:'var(--text-muted)' }} axisLine={false} tickLine={false}/>
-                        <YAxis hide/>
-                        <Tooltip content={<ChartTip/>}/>
-                        <Area type="monotone" dataKey="Revenue" name="Revenue" stroke="var(--primary)" strokeWidth={2.2} fill="url(#revGrad)" dot={false} activeDot={{ r:4 }}/>
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div className="card" style={{ marginBottom:0 }}>
-                  <div className="card-header"><span className="card-title">Volume Trend (Bags)</span></div>
-                  <div className="card-body">
-                    <ResponsiveContainer width="100%" height={140}>
-                      <BarChart data={trendData} margin={{ top:4, right:4, left:0, bottom:0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
-                        <XAxis dataKey="name" tick={{ fontSize:10, fill:'var(--text-muted)' }} axisLine={false} tickLine={false}/>
-                        <YAxis hide/>
-                        <Tooltip content={<ChartTip/>}/>
-                        <Bar dataKey="bags" name="Bags" fill="var(--blue)" radius={[4,4,0,0]} maxBarSize={32}/>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-                  <div className="card" style={{ marginBottom:0 }}>
-                    <div className="card-header"><span className="card-title">Orders per Month</span></div>
-                    <div className="card-body">
-                      <ResponsiveContainer width="100%" height={120}>
-                        <BarChart data={trendData}>
-                          <XAxis dataKey="name" tick={{ fontSize:10, fill:'var(--text-muted)' }} axisLine={false} tickLine={false}/>
-                          <YAxis hide/>
-                          <Tooltip content={<ChartTip/>}/>
-                          <Bar dataKey="orders" name="Orders" fill="var(--purple)" radius={[3,3,0,0]} maxBarSize={24}/>
-                        </BarChart>
-                      </ResponsiveContainer>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                      <div>
+                        <div style={{ fontSize:10, color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase' }}>This Month</div>
+                        <div style={{ fontSize:18, fontWeight:800, color:color, marginTop:4 }}>{fmt.currency(thisMonth?.revenue||0)}</div>
+                        <div style={{ fontSize:11.5, color:'var(--text-muted)', marginTop:3 }}>{thisMonth?.bags||0} bags · {thisMonth?.orders||0} orders</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize:10, color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase' }}>vs Last Month</div>
+                        <div style={{ fontSize:18, fontWeight:800, color:revGrowth>=0?'var(--green)':'var(--red)', display:'flex', alignItems:'center', gap:5, marginTop:4 }}>
+                          {revGrowth>=0?<TrendingUp size={16}/>:<TrendingDown size={16}/>}
+                          {fmt.percent(Math.abs(revGrowth))}
+                        </div>
+                        <div style={{ fontSize:11.5, color:'var(--text-muted)', marginTop:3 }}>Prev: {fmt.currency(lastMonth?.revenue||0)}</div>
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                {(revenueRank || bagsRank) && (
                   <div className="card" style={{ marginBottom:0 }}>
-                    <div className="card-header"><span className="card-title">Ranking</span></div>
-                    <div className="card-body" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    <div className="card-header"><span className="card-title">Client Ranking</span></div>
+                    <div className="card-body" style={{ display:'flex', flexDirection:'column', gap:10 }}>
                       {revenueRank && (
                         <div>
-                          <div style={{ fontSize:10.5, color:'var(--text-muted)', fontWeight:600, textTransform:'uppercase' }}>Revenue</div>
-                          <div style={{ fontSize:18, fontWeight:800, color:'var(--gold)' }}>#{revenueRank} <span style={{ fontSize:12, fontWeight:400, color:'var(--text-muted)' }}>of {totalClients}</span></div>
-                          <div style={{ background:'var(--border)', borderRadius:99, height:5, marginTop:4 }}>
-                            <div style={{ width:`${Math.max(((totalClients-revenueRank)/totalClients)*100,3)}%`, height:'100%', background:'var(--gold)', borderRadius:99 }}/>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                            <div style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600, textTransform:'uppercase' }}>By Revenue</div>
+                            <span style={{ fontWeight:800, color:'var(--gold)', fontSize:14 }}>#{revenueRank} <span style={{ fontSize:11, fontWeight:400, color:'var(--text-muted)' }}>of {totalClients}</span></span>
+                          </div>
+                          <div style={{ height:6, background:'var(--border)', borderRadius:99 }}>
+                            <div style={{ width:`${Math.max(((totalClients-revenueRank)/Math.max(totalClients-1,1))*100,3)}%`, height:'100%', background:'var(--gold)', borderRadius:99 }}/>
                           </div>
                         </div>
                       )}
                       {bagsRank && (
                         <div>
-                          <div style={{ fontSize:10.5, color:'var(--text-muted)', fontWeight:600, textTransform:'uppercase' }}>Volume</div>
-                          <div style={{ fontSize:18, fontWeight:800, color:'var(--blue)' }}>#{bagsRank} <span style={{ fontSize:12, fontWeight:400, color:'var(--text-muted)' }}>of {totalClients}</span></div>
-                          <div style={{ background:'var(--border)', borderRadius:99, height:5, marginTop:4 }}>
-                            <div style={{ width:`${Math.max(((totalClients-bagsRank)/totalClients)*100,3)}%`, height:'100%', background:'var(--blue)', borderRadius:99 }}/>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                            <div style={{ fontSize:11, color:'var(--text-muted)', fontWeight:600, textTransform:'uppercase' }}>By Volume</div>
+                            <span style={{ fontWeight:800, color:'var(--blue)', fontSize:14 }}>#{bagsRank} <span style={{ fontSize:11, fontWeight:400, color:'var(--text-muted)' }}>of {totalClients}</span></span>
+                          </div>
+                          <div style={{ height:6, background:'var(--border)', borderRadius:99 }}>
+                            <div style={{ width:`${Math.max(((totalClients-bagsRank)/Math.max(totalClients-1,1))*100,3)}%`, height:'100%', background:'var(--blue)', borderRadius:99 }}/>
                           </div>
                         </div>
                       )}
+                      <div style={{ fontSize:11.5, color:'var(--text-muted)', marginTop:2 }}>
+                        Revenue share: <strong style={{ color:color }}>{fmt.percent(revenueShare)}</strong> of total
+                      </div>
                     </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ─ NOTES ─ */}
-        {activeTab === 'notes' && (
-          <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-            {/* Add note form */}
-            <div className="card" style={{ marginBottom:0 }}>
-              <div className="card-header"><span className="card-title">Add Note</span></div>
-              <div className="card-body">
-                <form onSubmit={handleAddNote}>
-                  <div className="form-group" style={{ marginBottom:10 }}>
-                    <label className="form-label">Type</label>
-                    <select className="form-control" value={noteType} onChange={e=>setNoteType(e.target.value)}>
-                      {NOTE_TYPES.map(t => <option key={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group" style={{ marginBottom:10 }}>
-                    <label className="form-label">Note</label>
-                    <textarea className="form-control" rows={3} value={noteText} onChange={e=>setNoteText(e.target.value)} style={{ resize:'vertical' }} required/>
-                  </div>
-                  <button type="submit" className="btn btn-primary btn-sm" disabled={addingNote}>
-                    {addingNote ? 'Saving…' : <><Plus size={13}/> Add Note</>}
-                  </button>
-                </form>
+                )}
               </div>
             </div>
+          )}
 
-            {/* Notes list */}
-            {(!notes || notes.length === 0) ? (
-              <div className="empty-state" style={{ padding:32 }}><div className="empty-state-icon">📝</div><h3>No notes yet</h3><p>Add meeting notes, follow-ups, preferences, and more.</p></div>
-            ) : (
-              notes.map(n => (
+          {/* ─ ORDERS ─ */}
+          {activeTab === 'orders' && (
+            <div>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16, flexWrap:'wrap', gap:8 }}>
+                <span style={{ fontSize:13, color:'var(--text-muted)' }}>
+                  {orderPeriod==='alltime' ? `${purchases?.length||0} total transactions` : `${filteredPurchases.length} transactions this month`}
+                </span>
+                <TabToggle
+                  options={[{key:'alltime',label:'All Time'},{key:'monthly',label:'This Month'}]}
+                  value={orderPeriod}
+                  onChange={setOrderPeriod}
+                />
+              </div>
+
+              {/* Period summary */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(130px,1fr))', gap:10, marginBottom:18 }}>
+                <StatMini label="Orders"    value={periodStats.orders}                color="var(--blue)"/>
+                <StatMini label="Bags"      value={`${fmt.number(periodStats.bags)} bags`} color="var(--green)"/>
+                <StatMini label="Revenue"   value={fmt.currency(periodStats.revenue)} color={color}/>
+                <StatMini label="Avg Value" value={fmt.currency(periodStats.avgValue)} color="var(--purple)"/>
+                <StatMini label="Avg Bags"  value={fmt.number(periodStats.avgBags)}   color="var(--orange)"/>
+                {orderPeriod==='alltime' && <StatMini label="Largest" value={fmt.currency(periodStats.largest)} color="var(--gold)"/>}
+              </div>
+
+              {/* Table */}
+              {filteredPurchases.length === 0 ? (
+                <div style={{ textAlign:'center', padding:40, color:'var(--text-muted)' }}>
+                  <FileText size={32} style={{ opacity:0.3, marginBottom:10 }}/>
+                  <div style={{ fontWeight:600 }}>No transactions {orderPeriod==='monthly'?'this month':'yet'}</div>
+                </div>
+              ) : (
+                <div className="table-wrap" style={{ borderRadius:10, overflow:'hidden' }}>
+                  <table>
+                    <thead>
+                      <tr><th>Date</th><th>Invoice</th><th>Qty (Bags)</th><th>Unit Price</th><th>Total</th><th>Method</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                      {filteredPurchases.map(p => (
+                        <tr key={p.id}>
+                          <td style={{ whiteSpace:'nowrap', fontSize:12, color:'var(--text-muted)' }}>{fmt.date(p.date)}</td>
+                          <td style={{ fontSize:12, fontFamily:'monospace', color:'var(--primary)' }}>{p.invoice_number}</td>
+                          <td style={{ fontWeight:700 }}>{fmt.number(p.quantity)}</td>
+                          <td style={{ fontSize:12.5 }}>{fmt.currency(p.selling_price)}</td>
+                          <td style={{ fontWeight:800, color:'var(--primary)' }}>{fmt.currency(p.total_sales)}</td>
+                          <td><span className="badge badge-blue" style={{ fontSize:10 }}>{p.payment_method}</span></td>
+                          <td><span className={`badge ${p.payment_status==='Paid'?'badge-green':'badge-red'}`} style={{ fontSize:10 }}>{p.payment_status}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="tfoot-row">
+                        <td colSpan={2} style={{ fontWeight:700 }}>TOTAL {orderPeriod==='alltime'?'(All Time)':'(This Month)'}</td>
+                        <td style={{ fontWeight:800 }}>{fmt.number(periodStats.bags)} bags</td>
+                        <td></td>
+                        <td style={{ fontWeight:800 }}>{fmt.currency(periodStats.revenue)}</td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─ ANALYTICS ─ */}
+          {activeTab === 'analytics' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+              {trendData.length === 0 ? (
+                <div style={{ textAlign:'center', padding:48, color:'var(--text-muted)' }}>
+                  <BarChart2 size={36} style={{ opacity:0.3, marginBottom:12 }}/>
+                  <div style={{ fontWeight:600, fontSize:14 }}>No transaction data yet</div>
+                  <div style={{ fontSize:12, marginTop:4 }}>Charts will appear once purchases are recorded</div>
+                </div>
+              ) : (
+                <>
+                  {/* Revenue area chart */}
+                  <div className="card" style={{ marginBottom:0 }}>
+                    <div className="card-header">
+                      <span className="card-title">Revenue Over Time</span>
+                      <span style={{ fontSize:11, color:'var(--text-muted)' }}>Monthly · GHS</span>
+                    </div>
+                    <div className="card-body">
+                      <ResponsiveContainer width="100%" height={220}>
+                        <AreaChart data={trendData} margin={{ top:10, right:20, left:10, bottom:0 }}>
+                          <defs>
+                            <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%"  stopColor={color} stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor={color} stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
+                          <XAxis dataKey="name" tick={{ fontSize:11, fill:'var(--text-muted)' }} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
+                          <YAxis
+                            tick={{ fontSize:11, fill:'var(--text-muted)' }} axisLine={false} tickLine={false}
+                            tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
+                            width={48} label={{ value:'GHS', angle:-90, position:'insideLeft', offset:10, style:{ fontSize:10, fill:'var(--text-muted)' } }}
+                          />
+                          <Tooltip content={<ChartTip/>}/>
+                          <Area type="monotone" dataKey="Revenue" name="Revenue" stroke={color} strokeWidth={2.5} fill="url(#revGrad)" dot={{ r:3, fill:color, strokeWidth:0 }} activeDot={{ r:5, strokeWidth:0 }}/>
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Bags bar + Orders line side by side */}
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                    <div className="card" style={{ marginBottom:0 }}>
+                      <div className="card-header">
+                        <span className="card-title">Bags Purchased</span>
+                        <span style={{ fontSize:11, color:'var(--text-muted)' }}>Monthly · Bags</span>
+                      </div>
+                      <div className="card-body">
+                        <ResponsiveContainer width="100%" height={180}>
+                          <BarChart data={trendData} margin={{ top:8, right:16, left:8, bottom:0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
+                            <XAxis dataKey="name" tick={{ fontSize:10, fill:'var(--text-muted)' }} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
+                            <YAxis tick={{ fontSize:10, fill:'var(--text-muted)' }} axisLine={false} tickLine={false} width={32} allowDecimals={false}
+                              label={{ value:'Bags', angle:-90, position:'insideLeft', offset:14, style:{ fontSize:10, fill:'var(--text-muted)' } }}
+                            />
+                            <Tooltip content={<ChartTip/>}/>
+                            <Bar dataKey="Bags" name="Bags" fill="var(--blue)" radius={[4,4,0,0]} maxBarSize={40}/>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    <div className="card" style={{ marginBottom:0 }}>
+                      <div className="card-header">
+                        <span className="card-title">Orders Placed</span>
+                        <span style={{ fontSize:11, color:'var(--text-muted)' }}>Monthly · Count</span>
+                      </div>
+                      <div className="card-body">
+                        <ResponsiveContainer width="100%" height={180}>
+                          <LineChart data={trendData} margin={{ top:8, right:16, left:8, bottom:0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false}/>
+                            <XAxis dataKey="name" tick={{ fontSize:10, fill:'var(--text-muted)' }} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
+                            <YAxis tick={{ fontSize:10, fill:'var(--text-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} width={32}
+                              label={{ value:'Orders', angle:-90, position:'insideLeft', offset:14, style:{ fontSize:10, fill:'var(--text-muted)' } }}
+                            />
+                            <Tooltip content={<ChartTip/>}/>
+                            <Line type="monotone" dataKey="Orders" name="Orders" stroke="var(--purple)" strokeWidth={2.5} dot={{ r:4, fill:'var(--purple)', strokeWidth:0 }} activeDot={{ r:6, strokeWidth:0 }}/>
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ─ NOTES ─ */}
+          {activeTab === 'notes' && (
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div className="card" style={{ marginBottom:0 }}>
+                <div className="card-header"><span className="card-title">Add Note</span></div>
+                <div className="card-body">
+                  <form onSubmit={handleAddNote}>
+                    <div style={{ display:'flex', gap:10, marginBottom:10, flexWrap:'wrap' }}>
+                      <select className="form-control" style={{ width:150 }} value={noteType} onChange={e=>setNoteType(e.target.value)}>
+                        {NOTE_TYPES.map(t=><option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <textarea className="form-control" rows={2} value={noteText} onChange={e=>setNoteText(e.target.value)} style={{ resize:'vertical', marginBottom:10 }} placeholder="Write your note here…" required/>
+                    <button type="submit" className="btn btn-primary btn-sm" disabled={addingNote}>
+                      {addingNote ? 'Saving…' : <><Plus size={13}/> Add Note</>}
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              {(!notes||notes.length===0) ? (
+                <div style={{ textAlign:'center', padding:32, color:'var(--text-muted)' }}>
+                  <MessageSquare size={28} style={{ opacity:0.3, marginBottom:8 }}/>
+                  <div style={{ fontWeight:600 }}>No notes yet</div>
+                </div>
+              ) : notes.map(n => (
                 <div key={n.id} className="card" style={{ marginBottom:0 }}>
-                  <div className="card-body" style={{ paddingTop:12, paddingBottom:12 }}>
+                  <div className="card-body" style={{ padding:'12px 16px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
                       <div style={{ flex:1 }}>
                         <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:6 }}>
                           <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:99, background:'var(--primary-pale)', color:'var(--primary)' }}>{n.note_type}</span>
-                          <span style={{ fontSize:11, color:'var(--text-muted)' }}>{n.author || 'Staff'} · {fmt.date(n.created_at?.slice(0,10))}</span>
+                          <span style={{ fontSize:11, color:'var(--text-muted)' }}>{n.author||'Staff'} · {fmt.date(n.created_at?.slice(0,10))}</span>
                         </div>
                         <p style={{ fontSize:13, color:'var(--text)', lineHeight:1.6, margin:0 }}>{n.content}</p>
                       </div>
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteNote(n.id)} style={{ color:'var(--red)', flexShrink:0 }}><Trash2 size={12}/></button>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>handleDeleteNote(n.id)} style={{ color:'var(--red)', flexShrink:0 }}><Trash2 size={13}/></button>
                     </div>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </td>
+    </tr>
   );
 }
 
-// ── Form field wrapper — defined OUTSIDE modal so it never remounts ───────────
+// ── Form field wrapper — OUTSIDE modal (prevents re-mount on every keystroke) ──
 function F({ label, children }) {
   return (
     <div className="form-group">
@@ -511,7 +615,7 @@ function F({ label, children }) {
 // CLIENT FORM MODAL
 // ═══════════════════════════════════════════════════════════════════════════════
 function ClientModal({ client, onClose, onSaved }) {
-  const [form, setForm]   = useState(client ? { ...client } : { ...EMPTY_CLIENT });
+  const [form, setForm]     = useState(client ? { ...client } : { ...EMPTY_CLIENT });
   const [saving, setSaving] = useState(false);
   const isEdit = !!client?.id;
 
@@ -520,10 +624,10 @@ function ClientModal({ client, onClose, onSaved }) {
   async function handleSubmit(e) {
     e.preventDefault(); setSaving(true);
     try {
-      if (isEdit) { await api.put(`/clients/${client.id}`, form); toast.success('Client updated ✅'); }
-      else        { await api.post('/clients', form); toast.success('Client added ✅'); }
+      if (isEdit) { await api.put(`/clients/${client.id}`, form); toast.success('Client updated'); }
+      else        { await api.post('/clients', form); toast.success('Client added'); }
       onSaved();
-    } catch (err) { toast.error(err.response?.data?.error || 'Error saving client.'); }
+    } catch (err) { toast.error(err.response?.data?.error||'Error saving.'); }
     finally { setSaving(false); }
   }
 
@@ -591,7 +695,7 @@ function ClientModal({ client, onClose, onSaved }) {
           </div>
           <div className="modal-footer">
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : isEdit ? '✅ Update Client' : '✅ Add Client'}</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : isEdit ? 'Update Client' : 'Add Client'}</button>
           </div>
         </form>
       </div>
@@ -603,32 +707,26 @@ function ClientModal({ client, onClose, onSaved }) {
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Clients() {
-  // Directory state
-  const [clients, setClients]   = useState([]);
-  const [total, setTotal]       = useState(0);
-  const [page, setPage]         = useState(1);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState('');
-  const [filterCat, setFilterCat] = useState('');
+  const [clients, setClients]       = useState([]);
+  const [total, setTotal]           = useState(0);
+  const [page, setPage]             = useState(1);
+  const [loading, setLoading]       = useState(true);
+  const [search, setSearch]         = useState('');
+  const [filterCat, setFilterCat]   = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterRegion, setFilterRegion] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-
-  // KPIs & insights
-  const [kpis, setKpis]         = useState(null);
-  const [insights, setInsights] = useState(null);
-  const [regions, setRegions]   = useState([]);
-
-  // UI state
-  const [modal, setModal]       = useState(null); // null | 'create' | clientObj
-  const [profileId, setProfileId] = useState(null);
-  const [activeView, setActiveView] = useState('directory'); // 'directory' | 'insights'
-
+  const [kpis, setKpis]             = useState(null);
+  const [insights, setInsights]     = useState(null);
+  const [regions, setRegions]       = useState([]);
+  const [modal, setModal]           = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+  const [activeView, setActiveView] = useState('directory');
   const LIMIT = 20;
 
   const loadClients = useCallback(() => {
     setLoading(true);
-    api.get('/clients', { params: { search, category: filterCat, status: filterStatus, region: filterRegion, page, limit: LIMIT } })
+    api.get('/clients', { params:{ search, category:filterCat, status:filterStatus, region:filterRegion, page, limit:LIMIT } })
       .then(r => { setClients(r.data.clients); setTotal(r.data.total); setLoading(false); })
       .catch(() => setLoading(false));
   }, [search, filterCat, filterStatus, filterRegion, page]);
@@ -636,47 +734,41 @@ export default function Clients() {
   useEffect(() => { loadClients(); }, [loadClients]);
 
   useEffect(() => {
-    api.get('/clients/kpis').then(r => setKpis(r.data)).catch(()=>{});
-    api.get('/clients/insights').then(r => setInsights(r.data)).catch(()=>{});
-    api.get('/clients/regions').then(r => setRegions(r.data)).catch(()=>{});
+    api.get('/clients/kpis').then(r=>setKpis(r.data)).catch(()=>{});
+    api.get('/clients/insights').then(r=>setInsights(r.data)).catch(()=>{});
+    api.get('/clients/regions').then(r=>setRegions(r.data)).catch(()=>{});
   }, []);
 
   async function handleDelete(id, name) {
-    if (!window.confirm(`Delete client "${name}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
     await api.delete(`/clients/${id}`);
-    toast.success('Client deleted.'); loadClients();
-    if (profileId === id) setProfileId(null);
+    toast.success('Client deleted.');
+    loadClients();
+    if (expandedId === id) setExpandedId(null);
   }
 
-  function onSaved() { setModal(null); loadClients(); api.get('/clients/kpis').then(r=>setKpis(r.data)); }
+  function onSaved() {
+    setModal(null); loadClients();
+    api.get('/clients/kpis').then(r=>setKpis(r.data));
+  }
 
   const totalPages = Math.ceil(total / LIMIT);
-
-  // Category breakdown for pie
-  const catData = CATEGORIES.map(c => ({
-    name: c, value: clients.filter(cl => cl.category === c).length
-  })).filter(d => d.value > 0);
+  const catData = CATEGORIES.map(c => ({ name:c, value:clients.filter(cl=>cl.category===c).length })).filter(d=>d.value>0);
 
   return (
-    <div style={{ position:'relative' }}>
-
+    <div>
       {/* ── Page Header ──────────────────────────────────────────────── */}
       <div className="page-header">
         <div>
-          <div className="page-title">👥 Client Management</div>
-          <div className="page-sub">CRM & Business Intelligence Dashboard</div>
+          <div className="page-title">Client Management</div>
+          <div className="page-sub">CRM and Business Intelligence Dashboard</div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
-          <div style={{ display:'flex', background:'var(--bg)', border:'1.5px solid var(--border)', borderRadius:10, padding:3 }}>
-            {['directory','insights'].map(v => (
-              <button key={v} onClick={()=>setActiveView(v)} style={{
-                padding:'6px 14px', borderRadius:7, border:'none', cursor:'pointer',
-                fontFamily:'var(--font)', fontSize:12.5, fontWeight:600,
-                background: activeView===v ? 'var(--primary)' : 'transparent',
-                color: activeView===v ? '#fff' : 'var(--text-muted)', transition:'all 0.2s',
-              }}>{v.charAt(0).toUpperCase()+v.slice(1)}</button>
-            ))}
-          </div>
+          <TabToggle
+            options={[{key:'directory',label:'Directory'},{key:'insights',label:'Insights'}]}
+            value={activeView}
+            onChange={setActiveView}
+          />
           <button className="btn btn-primary" onClick={()=>setModal(true)}>
             <Plus size={15}/> Add Client
           </button>
@@ -685,83 +777,89 @@ export default function Clients() {
 
       {/* ── KPI Cards ─────────────────────────────────────────────────── */}
       {kpis && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))', gap:12, marginBottom:20 }}>
-          <KpiCard icon={User}      label="Total Clients"      value={fmt.number(kpis.total_clients)}     color="var(--primary)"  sub={`${kpis.active_clients} active`}/>
-          <KpiCard icon={Star}      label="New This Month"     value={kpis.new_this_month}                color="var(--green)"    sub="added this month"/>
-          <KpiCard icon={TrendingUp} label="Total Revenue"     value={fmt.currency(kpis.total_revenue)}   color="var(--purple)"   sub="all time"/>
-          <KpiCard icon={BarChart2} label="Total Bags Sold"    value={`${fmt.number(kpis.total_bags)} bags`} color="var(--blue)" sub="all clients"/>
-          <KpiCard icon={FileText}  label="Avg Order Value"    value={fmt.currency(kpis.avg_order_value)} color="var(--orange)"  sub="per transaction"/>
-          <KpiCard icon={RefreshCw} label="Returning Rate"     value={fmt.percent(kpis.returning_rate)}   color="var(--gold)"    sub=">1 order placed"/>
-          <KpiCard icon={Award}     label="Top Spender"        value={kpis.top_spender}                   color="var(--red)"     sub={fmt.currency(kpis.top_spender_rev)}/>
-          <KpiCard icon={Award}     label="Top Volume"         value={kpis.top_volume}                    color="var(--primary)" sub={`${fmt.number(kpis.top_volume_bags)} bags`}/>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(155px,1fr))', gap:12, marginBottom:24 }}>
+          <KpiCard icon={Users}       label="Total Clients"    value={fmt.number(kpis.total_clients)}        color="var(--primary)"  sub={`${kpis.active_clients} active`}/>
+          <KpiCard icon={Plus}        label="New This Month"   value={kpis.new_this_month}                   color="var(--green)"    sub="added recently"/>
+          <KpiCard icon={DollarSign}  label="Total Revenue"    value={fmt.currency(kpis.total_revenue)}      color="var(--purple)"   sub="all time"/>
+          <KpiCard icon={Package}     label="Bags Sold"        value={`${fmt.number(kpis.total_bags)} bags`} color="var(--blue)"     sub="all clients"/>
+          <KpiCard icon={ShoppingCart} label="Avg Order Value" value={fmt.currency(kpis.avg_order_value)}    color="var(--orange)"   sub="per transaction"/>
+          <KpiCard icon={RefreshCw}   label="Returning Rate"   value={fmt.percent(kpis.returning_rate)}      color="var(--gold)"     sub="placed 2+ orders"/>
+          <KpiCard icon={Award}       label="Top Spender"      value={kpis.top_spender}                      color="var(--red)"      sub={fmt.currency(kpis.top_spender_rev)}/>
+          <KpiCard icon={TrendingUp}  label="Top Volume"       value={kpis.top_volume}                       color="var(--primary)"  sub={`${fmt.number(kpis.top_volume_bags)} bags`}/>
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════════════ */}
-      {/* DIRECTORY VIEW                                                 */}
-      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ══ DIRECTORY VIEW ══════════════════════════════════════════════ */}
       {activeView === 'directory' && (
-        <div style={{ display:'flex', gap:16 }}>
-
-          {/* Client table */}
-          <div style={{ flex:1, minWidth:0 }}>
-            {/* Controls */}
-            <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap', alignItems:'center' }}>
-              <div style={{ position:'relative', flex:1, minWidth:180 }}>
-                <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--text-muted)', pointerEvents:'none' }}/>
-                <input className="form-control" style={{ paddingLeft:32 }} value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} placeholder="Search clients…"/>
-              </div>
-              <button className={`btn btn-ghost btn-sm${showFilters?' btn-active':''}`} onClick={()=>setShowFilters(f=>!f)}><Filter size={13}/> Filter</button>
-              <span style={{ fontSize:12, color:'var(--text-muted)', flexShrink:0 }}>{total} client{total!==1?'s':''}</span>
+        <div>
+          {/* Search & Filter bar */}
+          <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap', alignItems:'center' }}>
+            <div style={{ position:'relative', flex:1, minWidth:180 }}>
+              <Search size={13} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--text-muted)', pointerEvents:'none' }}/>
+              <input className="form-control" style={{ paddingLeft:32 }} value={search}
+                onChange={e=>{ setSearch(e.target.value); setPage(1); }}
+                placeholder="Search by name, code, phone, email…"/>
             </div>
+            <button className="btn btn-ghost btn-sm" onClick={()=>setShowFilters(f=>!f)}>
+              <Filter size={13}/> Filter {showFilters && <X size={11}/>}
+            </button>
+            <span style={{ fontSize:12, color:'var(--text-muted)', flexShrink:0 }}>{total} client{total!==1?'s':''}</span>
+          </div>
 
-            {showFilters && (
-              <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
-                <select className="form-control" style={{ width:140 }} value={filterCat} onChange={e=>{setFilterCat(e.target.value);setPage(1);}}>
-                  <option value="">All Categories</option>
-                  {CATEGORIES.map(c=><option key={c}>{c}</option>)}
-                </select>
-                <select className="form-control" style={{ width:120 }} value={filterStatus} onChange={e=>{setFilterStatus(e.target.value);setPage(1);}}>
-                  <option value="">All Status</option>
-                  <option>Active</option><option>Inactive</option>
-                </select>
-                <select className="form-control" style={{ width:160 }} value={filterRegion} onChange={e=>{setFilterRegion(e.target.value);setPage(1);}}>
-                  <option value="">All Regions</option>
-                  {REGIONS_GH.map(r=><option key={r}>{r}</option>)}
-                </select>
-                {(filterCat||filterStatus||filterRegion) && (
-                  <button className="btn btn-ghost btn-sm" onClick={()=>{setFilterCat('');setFilterStatus('');setFilterRegion('');setPage(1);}}><X size={13}/> Clear</button>
-                )}
-              </div>
-            )}
+          {showFilters && (
+            <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
+              <select className="form-control" style={{ width:150 }} value={filterCat} onChange={e=>{ setFilterCat(e.target.value); setPage(1); }}>
+                <option value="">All Categories</option>
+                {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+              </select>
+              <select className="form-control" style={{ width:120 }} value={filterStatus} onChange={e=>{ setFilterStatus(e.target.value); setPage(1); }}>
+                <option value="">All Status</option>
+                <option>Active</option><option>Inactive</option>
+              </select>
+              <select className="form-control" style={{ width:170 }} value={filterRegion} onChange={e=>{ setFilterRegion(e.target.value); setPage(1); }}>
+                <option value="">All Regions</option>
+                {REGIONS_GH.map(r=><option key={r}>{r}</option>)}
+              </select>
+              {(filterCat||filterStatus||filterRegion) && (
+                <button className="btn btn-ghost btn-sm" onClick={()=>{ setFilterCat(''); setFilterStatus(''); setFilterRegion(''); setPage(1); }}>
+                  <X size={12}/> Clear
+                </button>
+              )}
+            </div>
+          )}
 
-            <div className="card">
-              <div className="table-wrap">
-                {loading ? (
-                  <div style={{ textAlign:'center', padding:48 }}>
-                    <div style={{ width:32, height:32, border:'3px solid var(--primary-pale)', borderTopColor:'var(--primary)', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto' }}/>
-                  </div>
-                ) : clients.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-state-icon">👥</div>
-                    <h3>No clients found</h3>
-                    <p>Add your first client or adjust your search filters.</p>
-                    <button className="btn btn-primary btn-sm" onClick={()=>setModal(true)}><Plus size={13}/> Add Client</button>
-                  </div>
-                ) : (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Client</th><th>Category</th><th>Contact</th><th>Region</th>
-                        <th>Orders</th><th>Revenue</th><th>Last Purchase</th><th>Status</th><th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {clients.map(c => (
-                        <tr key={c.id} style={{ cursor:'pointer' }} onClick={()=>setProfileId(c.id)}>
+          <div className="card">
+            <div className="table-wrap">
+              {loading ? (
+                <div style={{ textAlign:'center', padding:48 }}>
+                  <div style={{ width:32, height:32, border:'3px solid var(--primary-pale)', borderTopColor:'var(--primary)', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto' }}/>
+                </div>
+              ) : clients.length === 0 ? (
+                <div className="empty-state">
+                  <Users size={36} style={{ opacity:0.25, marginBottom:10 }}/>
+                  <h3>No clients found</h3>
+                  <p>Add your first client or adjust your search filters.</p>
+                  <button className="btn btn-primary btn-sm" onClick={()=>setModal(true)}><Plus size={13}/> Add Client</button>
+                </div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Client</th><th>Category</th><th>Contact</th><th>Region</th>
+                      <th style={{ textAlign:'center' }}>Orders</th>
+                      <th>Revenue</th><th>Last Purchase</th><th>Status</th><th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clients.map(c => (
+                      <React.Fragment key={c.id}>
+                        <tr
+                          style={{ cursor:'pointer', background: expandedId===c.id ? 'var(--primary-pale)' : undefined }}
+                          onClick={()=>setExpandedId(expandedId===c.id ? null : c.id)}
+                        >
                           <td>
                             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                              <Avatar name={c.name} size={30} color={CAT_COLORS[c.category]}/>
+                              <Avatar name={c.name} size={32} color={CAT_COLORS[c.category]}/>
                               <div>
                                 <div style={{ fontWeight:700, fontSize:13 }}>{c.name}</div>
                                 <div style={{ fontSize:11, color:'var(--text-muted)', fontFamily:'monospace' }}>{c.client_code}</div>
@@ -769,159 +867,152 @@ export default function Clients() {
                             </div>
                           </td>
                           <td><CatBadge cat={c.category}/></td>
-                          <td style={{ fontSize:12, color:'var(--text-muted)' }}>
-                            {c.phone && <div style={{ display:'flex', gap:4, alignItems:'center' }}><Phone size={10}/>{c.phone}</div>}
-                            {c.email && <div style={{ display:'flex', gap:4, alignItems:'center' }}><Mail size={10}/>{c.email}</div>}
+                          <td style={{ fontSize:12 }}>
+                            {c.phone && <div style={{ display:'flex', alignItems:'center', gap:4, color:'var(--text-muted)' }}><Phone size={10}/>{c.phone}</div>}
+                            {c.email && <div style={{ display:'flex', alignItems:'center', gap:4, color:'var(--text-muted)' }}><Mail size={10}/>{c.email}</div>}
                           </td>
                           <td style={{ fontSize:12, color:'var(--text-muted)' }}>{c.region||'—'}</td>
                           <td style={{ fontWeight:700, textAlign:'center' }}>{c.total_orders||0}</td>
                           <td style={{ fontWeight:800, color:'var(--primary)', whiteSpace:'nowrap' }}>{fmt.currency(c.total_revenue||0)}</td>
-                          <td style={{ fontSize:12, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{fmt.date(c.last_purchase_date)||'Never'}</td>
+                          <td style={{ fontSize:12, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{c.last_purchase_date ? fmt.date(c.last_purchase_date) : '—'}</td>
                           <td><StatusBadge status={c.status}/></td>
                           <td>
-                            <div style={{ display:'flex', gap:4 }}>
-                              <button className="btn btn-ghost btn-sm" onClick={e=>{e.stopPropagation();setModal(c);}} title="Edit"><Edit2 size={12}/></button>
-                              <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={e=>{e.stopPropagation();handleDelete(c.id,c.name);}} title="Delete"><Trash2 size={12}/></button>
+                            <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+                              <button className="btn btn-ghost btn-sm" onClick={e=>{ e.stopPropagation(); setModal(c); }} title="Edit"><Edit2 size={12}/></button>
+                              <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={e=>{ e.stopPropagation(); handleDelete(c.id,c.name); }} title="Delete"><Trash2 size={12}/></button>
+                              {expandedId===c.id ? <ChevronUp size={14} style={{ color:'var(--primary)' }}/> : <ChevronDown size={14} style={{ color:'var(--text-muted)' }}/>}
                             </div>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
-                  <span style={{ fontSize:12, color:'var(--text-muted)' }}>Page {page} of {totalPages} · {total} total</span>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <button className="btn btn-ghost btn-sm" disabled={page<=1} onClick={()=>setPage(p=>p-1)}>← Prev</button>
-                    <button className="btn btn-ghost btn-sm" disabled={page>=totalPages} onClick={()=>setPage(p=>p+1)}>Next →</button>
-                  </div>
-                </div>
+                        {expandedId === c.id && (
+                          <ClientProfileRow
+                            clientId={c.id}
+                            onEdit={cl=>setModal(cl)}
+                            onDelete={handleDelete}
+                            allRanked={insights?.allRanked||[]}
+                            kpis={kpis}
+                          />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
-          </div>
 
-          {/* Client Profile Side Panel */}
-          {profileId && (
-            <div style={{
-              width:480, flexShrink:0,
-              background:'var(--card)', borderRadius:'var(--radius)', border:'1px solid var(--border)',
-              boxShadow:'var(--shadow-lg)', display:'flex', flexDirection:'column',
-              height:'calc(100vh - 160px)', position:'sticky', top:80, overflow:'hidden',
-            }}>
-              <ClientProfile
-                clientId={profileId}
-                onClose={()=>setProfileId(null)}
-                onEdit={c=>setModal(c)}
-                onDelete={handleDelete}
-                allRanked={insights?.allRanked || []}
-              />
-            </div>
-          )}
+            {totalPages > 1 && (
+              <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span style={{ fontSize:12, color:'var(--text-muted)' }}>Page {page} of {totalPages} · {total} total</span>
+                <div style={{ display:'flex', gap:6 }}>
+                  <button className="btn btn-ghost btn-sm" disabled={page<=1} onClick={()=>setPage(p=>p-1)}>← Prev</button>
+                  <button className="btn btn-ghost btn-sm" disabled={page>=totalPages} onClick={()=>setPage(p=>p+1)}>Next →</button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* ══════════════════════════════════════════════════════════════ */}
-      {/* INSIGHTS VIEW                                                  */}
-      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* ══ INSIGHTS VIEW ═══════════════════════════════════════════════ */}
       {activeView === 'insights' && (
         <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
 
-          {/* Top clients + Category pie */}
-          <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr', gap:16 }}>
-
-            {/* Top 5 by revenue */}
+          {/* Top clients + Category — stacked on mobile via CSS class */}
+          <div className="insights-top-grid">
             <div className="card" style={{ marginBottom:0 }}>
-              <div className="card-header"><span className="card-title">🏆 Top Clients by Revenue</span></div>
+              <div className="card-header">
+                <span className="card-title" style={{ display:'flex', alignItems:'center', gap:7 }}>
+                  <Award size={15} style={{ color:'var(--gold)' }}/> Top Clients by Revenue
+                </span>
+              </div>
               <div className="card-body">
-                {(insights?.mostProfitable || []).map((c,i) => (
-                  <div key={c.customer_name} style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
-                    <div style={{ width:24, height:24, borderRadius:'50%', background: i===0?'var(--gold)':i===1?'var(--border)':i===2?'#CD7F32':'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color: i<3?'#fff':'var(--text-muted)', flexShrink:0 }}>
-                      {i+1}
-                    </div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontWeight:700, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.customer_name}</div>
-                      <div style={{ display:'flex', gap:10, fontSize:11, color:'var(--text-muted)' }}>
-                        <span>{c.orders} orders</span><span>{fmt.number(c.bags)} bags</span>
+                {(insights?.mostProfitable||[]).length === 0
+                  ? <div style={{ textAlign:'center', color:'var(--text-muted)', padding:24 }}>No data yet</div>
+                  : (insights.mostProfitable||[]).map((c,i) => (
+                    <div key={c.customer_name} style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+                      <div style={{ width:26, height:26, borderRadius:'50%', background:i===0?'var(--gold)':i===1?'#aaa':i===2?'#CD7F32':'var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:'#fff', flexShrink:0 }}>
+                        {i+1}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:700, fontSize:13, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.customer_name}</div>
+                        <div style={{ fontSize:11, color:'var(--text-muted)', marginTop:1 }}>{c.orders} orders · {fmt.number(c.bags)} bags</div>
+                      </div>
+                      <div style={{ textAlign:'right', flexShrink:0 }}>
+                        <div style={{ fontWeight:800, color:'var(--primary)', fontSize:13 }}>{fmt.currency(c.rev)}</div>
+                        {kpis?.total_revenue>0 && <div style={{ fontSize:10.5, color:'var(--text-muted)' }}>{fmt.percent((c.rev/kpis.total_revenue)*100)} share</div>}
                       </div>
                     </div>
-                    <div style={{ textAlign:'right', flexShrink:0 }}>
-                      <div style={{ fontWeight:800, color:'var(--primary)', fontSize:13 }}>{fmt.currency(c.rev)}</div>
-                      {kpis?.total_revenue > 0 && <div style={{ fontSize:10.5, color:'var(--text-muted)' }}>{fmt.percent((c.rev/kpis.total_revenue)*100)} share</div>}
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
 
-            {/* Category distribution */}
             <div className="card" style={{ marginBottom:0 }}>
-              <div className="card-header"><span className="card-title">Client Categories</span></div>
+              <div className="card-header">
+                <span className="card-title" style={{ display:'flex', alignItems:'center', gap:7 }}>
+                  <Users size={14}/> Client Categories
+                </span>
+              </div>
               <div className="card-body">
                 {clients.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={180}>
+                  <ResponsiveContainer width="100%" height={220}>
                     <PieChart>
-                      <Pie data={catData} cx="50%" cy="50%" innerRadius={45} outerRadius={72} dataKey="value" paddingAngle={3}>
-                        {catData.map((entry,i) => <Cell key={i} fill={CAT_COLORS[entry.name]||PIE_COLORS[i%PIE_COLORS.length]}/>)}
+                      <Pie data={catData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value" paddingAngle={3}>
+                        {catData.map((entry,i)=><Cell key={i} fill={CAT_COLORS[entry.name]||PIE_COLORS[i%PIE_COLORS.length]}/>)}
                       </Pie>
                       <Tooltip formatter={(v,n)=>[v+' clients',n]}/>
-                      <Legend wrapperStyle={{ fontSize:11 }}/>
+                      <Legend wrapperStyle={{ fontSize:11.5 }}/>
                     </PieChart>
                   </ResponsiveContainer>
-                ) : <div style={{ textAlign:'center', color:'var(--text-muted)', padding:40 }}>No data yet</div>}
+                ) : <div style={{ textAlign:'center', color:'var(--text-muted)', padding:40 }}>Add clients to see distribution</div>}
               </div>
             </div>
           </div>
 
-          {/* Business Intelligence alerts */}
+          {/* Business Intelligence */}
           <div className="card" style={{ marginBottom:0 }}>
-            <div className="card-header"><span className="card-title">💡 Business Intelligence</span></div>
+            <div className="card-header">
+              <span className="card-title" style={{ display:'flex', alignItems:'center', gap:7 }}>
+                <Shield size={14} style={{ color:'var(--primary)' }}/> Business Intelligence
+              </span>
+            </div>
             <div className="card-body">
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:12 }}>
-
-                {/* Fastest growing */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(250px,1fr))', gap:12 }}>
                 {(insights?.growing||[]).length > 0 && (
-                  <div style={{ background:'var(--green-light)', border:'1px solid var(--green)', borderRadius:10, padding:'12px 14px' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:6, fontWeight:700, color:'var(--green)', fontSize:13, marginBottom:8 }}>
+                  <div style={{ background:'var(--green-light)', border:'1px solid var(--green)', borderRadius:10, padding:'13px 15px' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, fontWeight:700, color:'var(--green)', fontSize:13, marginBottom:10 }}>
                       <TrendingUp size={14}/> Fastest Growing
                     </div>
-                    {insights.growing.map(g => (
-                      <div key={g.customer_name} style={{ display:'flex', justifyContent:'space-between', fontSize:12.5, marginBottom:4 }}>
+                    {insights.growing.map(g=>(
+                      <div key={g.customer_name} style={{ display:'flex', justifyContent:'space-between', fontSize:12.5, marginBottom:5 }}>
                         <span style={{ fontWeight:600 }}>{g.customer_name}</span>
                         <span style={{ color:'var(--green)', fontWeight:700 }}>+{fmt.percent(g.growth)}</span>
                       </div>
                     ))}
                   </div>
                 )}
-
-                {/* Inactive 90 days */}
                 {(insights?.inactive90||[]).length > 0 && (
-                  <div style={{ background:'var(--red-light)', border:'1px solid var(--red)', borderRadius:10, padding:'12px 14px' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:6, fontWeight:700, color:'var(--red)', fontSize:13, marginBottom:8 }}>
+                  <div style={{ background:'var(--red-light)', border:'1px solid var(--red)', borderRadius:10, padding:'13px 15px' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, fontWeight:700, color:'var(--red)', fontSize:13, marginBottom:10 }}>
                       <AlertCircle size={14}/> Inactive 90+ Days
                     </div>
-                    {insights.inactive90.map(c => (
-                      <div key={c.customer_name} style={{ display:'flex', justifyContent:'space-between', fontSize:12.5, marginBottom:4 }}>
+                    {insights.inactive90.map(c=>(
+                      <div key={c.customer_name} style={{ display:'flex', justifyContent:'space-between', fontSize:12.5, marginBottom:5 }}>
                         <span style={{ fontWeight:600 }}>{c.customer_name}</span>
-                        <span style={{ color:'var(--text-muted)' }}>Last: {fmt.date(c.last_date)}</span>
+                        <span style={{ color:'var(--text-muted)', fontSize:11 }}>Last: {fmt.date(c.last_date)}</span>
                       </div>
                     ))}
                   </div>
                 )}
-
-                {/* Revenue concentration */}
                 {(insights?.mostProfitable||[]).length > 0 && kpis && (
-                  <div style={{ background:'var(--primary-pale)', border:'1px solid var(--primary)', borderRadius:10, padding:'12px 14px' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:6, fontWeight:700, color:'var(--primary)', fontSize:13, marginBottom:8 }}>
+                  <div style={{ background:'var(--primary-pale)', border:'1px solid var(--primary)', borderRadius:10, padding:'13px 15px' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6, fontWeight:700, color:'var(--primary)', fontSize:13, marginBottom:10 }}>
                       <Star size={14}/> Revenue Concentration
                     </div>
-                    <div style={{ fontSize:12.5 }}>
-                      Top client contributes <strong>{kpis.total_revenue>0 ? fmt.percent((insights.mostProfitable[0]?.rev/kpis.total_revenue)*100) : '0%'}</strong> of revenue.
+                    <div style={{ fontSize:12.5, lineHeight:1.6 }}>
+                      Top client contributes <strong>{kpis.total_revenue>0?fmt.percent((insights.mostProfitable[0]?.rev/kpis.total_revenue)*100):'0%'}</strong> of total revenue.
                     </div>
-                    <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:4 }}>
+                    <div style={{ fontSize:12, color:'var(--text-muted)', marginTop:5 }}>
                       Returning client rate: <strong>{fmt.percent(kpis.returning_rate)}</strong>
                     </div>
                   </div>
@@ -933,16 +1024,20 @@ export default function Clients() {
           {/* Regional breakdown */}
           {regions.length > 0 && (
             <div className="card" style={{ marginBottom:0 }}>
-              <div className="card-header"><span className="card-title">🗺️ Regional Breakdown</span></div>
+              <div className="card-header">
+                <span className="card-title" style={{ display:'flex', alignItems:'center', gap:7 }}>
+                  <MapPin size={14} style={{ color:'var(--primary)' }}/> Regional Breakdown
+                </span>
+              </div>
               <div className="card-body">
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:10 }}>
-                  {regions.map(r => (
-                    <div key={r.region} style={{ border:'1px solid var(--border)', borderRadius:10, padding:'10px 14px' }}>
+                  {regions.map(r=>(
+                    <div key={r.region} style={{ border:'1px solid var(--border)', borderRadius:10, padding:'11px 14px' }}>
                       <div style={{ fontWeight:700, fontSize:13, marginBottom:6 }}>{r.region}</div>
-                      <div style={{ fontSize:12, color:'var(--text-muted)', display:'flex', flexDirection:'column', gap:2 }}>
-                        <span>{r.clients} client{r.clients!==1?'s':''}</span>
-                        <span style={{ fontWeight:700, color:'var(--primary)' }}>{fmt.currency(r.revenue)}</span>
-                        <span>{fmt.number(r.bags)} bags</span>
+                      <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                        <span style={{ fontSize:12, color:'var(--text-muted)' }}>{r.clients} client{r.clients!==1?'s':''}</span>
+                        <span style={{ fontSize:13, fontWeight:700, color:'var(--primary)' }}>{fmt.currency(r.revenue)}</span>
+                        <span style={{ fontSize:12, color:'var(--text-muted)' }}>{fmt.number(r.bags)} bags</span>
                       </div>
                     </div>
                   ))}
@@ -951,33 +1046,32 @@ export default function Clients() {
             </div>
           )}
 
-          {/* Full client ranking table */}
+          {/* Full ranking table */}
           {(insights?.allRanked||[]).length > 0 && (
             <div className="card" style={{ marginBottom:0 }}>
               <div className="card-header">
-                <span className="card-title">Full Client Rankings</span>
+                <span className="card-title" style={{ display:'flex', alignItems:'center', gap:7 }}><BarChart2 size={14}/> Full Client Rankings</span>
                 <span style={{ fontSize:12, color:'var(--text-muted)' }}>{insights.allRanked.length} clients</span>
               </div>
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>#</th><th>Client</th><th>Orders</th><th>Bags</th><th>Revenue</th><th>Rev Share</th></tr></thead>
+                  <thead><tr><th>#</th><th>Client</th><th>Orders</th><th>Bags</th><th>Revenue</th><th>Revenue Share</th></tr></thead>
                   <tbody>
                     {insights.allRanked.map((c,i) => (
-                      <tr key={c.customer_name} style={{ cursor:'pointer' }} onClick={()=>{
-                        const found = clients.find(cl=>cl.name.toLowerCase().trim()===c.customer_name.toLowerCase().trim());
-                        if (found) { setProfileId(found.id); setActiveView('directory'); }
-                      }}>
-                        <td style={{ fontWeight:800, color: i===0?'var(--gold)':i===1?'var(--text-muted)':i===2?'#CD7F32':'var(--text-muted)', width:40 }}>#{i+1}</td>
+                      <tr key={c.customer_name} style={{ cursor:'pointer' }} onClick={()=>{ setActiveView('directory'); }}>
+                        <td style={{ fontWeight:800, color:i===0?'var(--gold)':i===1?'#aaa':i===2?'#CD7F32':'var(--text-muted)', width:40 }}>#{i+1}</td>
                         <td style={{ fontWeight:700 }}>{c.customer_name}</td>
                         <td style={{ textAlign:'center' }}>{c.orders}</td>
                         <td style={{ fontWeight:600 }}>{fmt.number(c.bags)}</td>
                         <td style={{ fontWeight:800, color:'var(--primary)' }}>{fmt.currency(c.revenue)}</td>
                         <td>
-                          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                             <div style={{ flex:1, height:5, background:'var(--border)', borderRadius:99 }}>
                               <div style={{ width:`${kpis?.total_revenue>0?(c.revenue/kpis.total_revenue)*100:0}%`, height:'100%', background:'var(--primary)', borderRadius:99 }}/>
                             </div>
-                            <span style={{ fontSize:11, color:'var(--text-muted)', flexShrink:0 }}>{kpis?.total_revenue>0?fmt.percent((c.revenue/kpis.total_revenue)*100):'0%'}</span>
+                            <span style={{ fontSize:11, color:'var(--text-muted)', flexShrink:0, minWidth:36 }}>
+                              {kpis?.total_revenue>0?fmt.percent((c.revenue/kpis.total_revenue)*100):'0%'}
+                            </span>
                           </div>
                         </td>
                       </tr>
@@ -990,7 +1084,7 @@ export default function Clients() {
         </div>
       )}
 
-      {/* ── Modals ────────────────────────────────────────────────────── */}
+      {/* Modals */}
       {modal && (
         <ClientModal
           client={typeof modal === 'object' && modal.id ? modal : null}
@@ -998,6 +1092,20 @@ export default function Clients() {
           onSaved={onSaved}
         />
       )}
+
+      {/* Responsive CSS */}
+      <style>{`
+        .insights-top-grid {
+          display: grid;
+          grid-template-columns: 1.4fr 1fr;
+          gap: 16px;
+        }
+        @media (max-width: 640px) {
+          .insights-top-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }
