@@ -484,7 +484,7 @@ function ClientProfile({ clientId, onClose, onEdit, onDelete, allRanked }) {
                         </div>
                         <p style={{ fontSize:13, color:'var(--text)', lineHeight:1.6, margin:0 }}>{n.content}</p>
                       </div>
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteNote(n.id)} style={{ color:'var(--red)', flexShrink:0 }}><Trash2 size=12/></button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteNote(n.id)} style={{ color:'var(--red)', flexShrink:0 }}><Trash2 size={12}/></button>
                     </div>
                   </div>
                 </div>
