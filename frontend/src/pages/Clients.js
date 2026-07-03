@@ -525,14 +525,14 @@ function ClientModal({ client, onClose, onSaved }) {
   );
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth:600, maxHeight:'92vh', display:'flex', flexDirection:'column' }}>
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" style={{ maxWidth:600 }}>
         <div className="modal-header">
           <span className="modal-title">{isEdit ? 'Edit Client' : 'Add New Client'}</span>
           <button className="btn btn-ghost btn-sm" onClick={onClose}><X size={16}/></button>
         </div>
-        <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', flex:1, overflow:'hidden' }}>
-          <div className="modal-body" style={{ overflowY:'auto', flex:1 }}>
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body">
             <div style={{ fontSize:11, fontWeight:700, color:'var(--primary)', textTransform:'uppercase', letterSpacing:'0.6px', marginBottom:10 }}>Basic Info</div>
             <div className="form-grid" style={{ marginBottom:16 }}>
               <F label="Client Name *"><input className="form-control" value={form.name} onChange={e=>set('name',e.target.value)} required/></F>
