@@ -900,8 +900,8 @@ export default function Clients() {
                   </tbody>
                 </table>
               )}
-              </div>{/* end table-wrap */}
-            </div>{/* end scroll wrapper */}
+              </div>
+            </div>
 
             {totalPages > 1 && (
               <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -926,7 +926,7 @@ export default function Clients() {
               onClose={()=>setExpandedId(null)}
             />
           )}
-        </div>{/* end directory view */}
+        </div>
       )}
 
       {/* ══ INSIGHTS VIEW ═══════════════════════════════════════════════ */}
