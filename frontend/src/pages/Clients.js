@@ -117,9 +117,9 @@ function StatMini({ label, value, color }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CLIENT PROFILE PANEL — rendered as a div BELOW the table (not inside it)
+// EXPANDED CLIENT PROFILE ROW
 // ═══════════════════════════════════════════════════════════════════════════════
-function ClientProfilePanel({ clientId, onEdit, onDelete, onClose, allRanked, kpis }) {
+function ClientProfileRow({ clientId, onEdit, onDelete, allRanked, kpis }) {
   const [data, setData]           = useState(null);
   const [loading, setLoading]     = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -156,9 +156,13 @@ function ClientProfilePanel({ clientId, onEdit, onDelete, onClose, allRanked, kp
   }
 
   if (loading || !data) return (
-    <div style={{ background:'var(--card)', border:'1px solid var(--border)', borderRadius:'var(--radius)', padding:32, display:'flex', justifyContent:'center', marginTop:12 }}>
-      <div style={{ width:28, height:28, border:'3px solid var(--primary-pale)', borderTopColor:'var(--primary)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
-    </div>
+    <tr>
+      <td colSpan={9} style={{ padding:28, background:'var(--bg)', borderBottom:'2px solid var(--border)' }}>
+        <div style={{ display:'flex', justifyContent:'center' }}>
+          <div style={{ width:28, height:28, border:'3px solid var(--primary-pale)', borderTopColor:'var(--primary)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
+        </div>
+      </td>
+    </tr>
   );
 
   const { client, lifetime, thisMonth, lastMonth, monthlyTrend, purchases, notes, revenueRank, bagsRank, totalClients, avgDaysBetween, revGrowth } = data;
@@ -198,14 +202,18 @@ function ClientProfilePanel({ clientId, onEdit, onDelete, onClose, allRanked, kp
   ];
 
   return (
-    <div className="client-expanded-wrap" style={{ marginTop:12 }}>
+    <tr>
+      <td colSpan={9} style={{ padding:0, background:'var(--bg)', borderBottom:`3px solid ${color}55` }}>
+        <div className="client-expanded-wrap">
 
         {/* ── Client Summary Card ────────────────────────────────────── */}
         <div style={{
+          margin:'12px 12px 0',
           background:'var(--card)',
           border:`1px solid var(--border)`,
           borderTop:`3px solid ${color}`,
-          borderRadius:'var(--radius) var(--radius) 0 0',
+          borderRadius:'var(--radius)',
+          boxShadow:'var(--shadow)',
           overflow:'hidden',
         }}>
           {/* Gradient header strip */}
@@ -602,7 +610,9 @@ function ClientProfilePanel({ clientId, onEdit, onDelete, onClose, allRanked, kp
             </div>
           )}
         </div>{/* end client-tab-content */}
-    </div>{/* end client-expanded-wrap */}
+        </div>{/* end viewport-constrain wrapper */}
+      </td>
+    </tr>
   );
 }
 
@@ -835,7 +845,7 @@ export default function Clients() {
 
           <div className="card" style={{ overflow:'hidden' }}>
             <div style={{ overflowX:'auto', WebkitOverflowScrolling:'touch' }}>
-              <div className="table-wrap" style={{ minWidth:640 }}>
+            <div className="table-wrap" style={{ minWidth:640 }}>
               {loading ? (
                 <div style={{ textAlign:'center', padding:48 }}>
                   <div style={{ width:32, height:32, border:'3px solid var(--primary-pale)', borderTopColor:'var(--primary)', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto' }}/>
@@ -858,49 +868,60 @@ export default function Clients() {
                   </thead>
                   <tbody>
                     {clients.map(c => (
-                      <tr
-                        key={c.id}
-                        style={{ cursor:'pointer', background: expandedId===c.id ? 'var(--primary-pale)' : undefined }}
-                        onClick={()=>setExpandedId(expandedId===c.id ? null : c.id)}
-                      >
-                        <td>
-                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                            <Avatar name={c.name} size={32} color={CAT_COLORS[c.category]}/>
-                            <div>
-                              <div style={{ fontWeight:700, fontSize:13 }}>{c.name}</div>
-                              <div style={{ fontSize:11, color:'var(--text-muted)', fontFamily:'monospace' }}>{c.client_code}</div>
+                      <React.Fragment key={c.id}>
+                        <tr
+                          style={{ cursor:'pointer', background: expandedId===c.id ? 'var(--primary-pale)' : undefined }}
+                          onClick={()=>setExpandedId(expandedId===c.id ? null : c.id)}
+                        >
+                          <td>
+                            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                              <Avatar name={c.name} size={32} color={CAT_COLORS[c.category]}/>
+                              <div>
+                                <div style={{ fontWeight:700, fontSize:13 }}>{c.name}</div>
+                                <div style={{ fontSize:11, color:'var(--text-muted)', fontFamily:'monospace' }}>{c.client_code}</div>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td><CatBadge cat={c.category}/></td>
-                        <td style={{ fontSize:12 }}>
-                          {c.phone && <div style={{ display:'flex', alignItems:'center', gap:4, color:'var(--text-muted)' }}><Phone size={10}/>{c.phone}</div>}
-                          {c.email && <div style={{ display:'flex', alignItems:'center', gap:4, color:'var(--text-muted)' }}><Mail size={10}/>{c.email}</div>}
-                        </td>
-                        <td style={{ fontSize:12, color:'var(--text-muted)' }}>{c.region||'—'}</td>
-                        <td style={{ fontWeight:700, textAlign:'center' }}>{c.total_orders||0}</td>
-                        <td style={{ fontWeight:800, color:'var(--primary)', whiteSpace:'nowrap' }}>{fmt.currency(c.total_revenue||0)}</td>
-                        <td style={{ fontSize:12, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{c.last_purchase_date ? fmt.date(c.last_purchase_date) : '—'}</td>
-                        <td><StatusBadge status={c.status}/></td>
-                        <td>
-                          <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                            <button className="btn btn-ghost btn-sm client-action-btn" onClick={e=>{ e.stopPropagation(); setModal(c); }} title="Edit"><Edit2 size={13}/></button>
-                            <button className="btn btn-ghost btn-sm client-action-btn delete" onClick={e=>{ e.stopPropagation(); handleDelete(c.id,c.name); }} title="Delete"><Trash2 size={13}/></button>
-                            <button
-                              className="client-expand-btn"
-                              onClick={e=>{ e.stopPropagation(); setExpandedId(expandedId===c.id ? null : c.id); }}
-                              title={expandedId===c.id ? 'Collapse' : 'Expand'}
-                            >
-                              {expandedId===c.id ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                          </td>
+                          <td><CatBadge cat={c.category}/></td>
+                          <td style={{ fontSize:12 }}>
+                            {c.phone && <div style={{ display:'flex', alignItems:'center', gap:4, color:'var(--text-muted)' }}><Phone size={10}/>{c.phone}</div>}
+                            {c.email && <div style={{ display:'flex', alignItems:'center', gap:4, color:'var(--text-muted)' }}><Mail size={10}/>{c.email}</div>}
+                          </td>
+                          <td style={{ fontSize:12, color:'var(--text-muted)' }}>{c.region||'—'}</td>
+                          <td style={{ fontWeight:700, textAlign:'center' }}>{c.total_orders||0}</td>
+                          <td style={{ fontWeight:800, color:'var(--primary)', whiteSpace:'nowrap' }}>{fmt.currency(c.total_revenue||0)}</td>
+                          <td style={{ fontSize:12, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{c.last_purchase_date ? fmt.date(c.last_purchase_date) : '—'}</td>
+                          <td><StatusBadge status={c.status}/></td>
+                          <td>
+                            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                              <button className="btn btn-ghost btn-sm client-action-btn" onClick={e=>{ e.stopPropagation(); setModal(c); }} title="Edit"><Edit2 size={13}/></button>
+                              <button className="btn btn-ghost btn-sm client-action-btn delete" onClick={e=>{ e.stopPropagation(); handleDelete(c.id,c.name); }} title="Delete"><Trash2 size={13}/></button>
+                              <button
+                                className="client-expand-btn"
+                                onClick={e=>{ e.stopPropagation(); setExpandedId(expandedId===c.id ? null : c.id); }}
+                                title={expandedId===c.id ? 'Collapse' : 'Expand'}
+                              >
+                                {expandedId===c.id ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {expandedId === c.id && (
+                          <ClientProfileRow
+                            clientId={c.id}
+                            onEdit={cl=>setModal(cl)}
+                            onDelete={handleDelete}
+                            allRanked={insights?.allRanked||[]}
+                            kpis={kpis}
+                          />
+                        )}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
               )}
-              </div>{/* end table-wrap */}
+            </div>{/* end table-wrap */}
             </div>{/* end scroll wrapper */}
 
             {totalPages > 1 && (
@@ -913,20 +934,7 @@ export default function Clients() {
               </div>
             )}
           </div>
-
-          {/* ── Expanded client details — OUTSIDE the table, full viewport width ── */}
-          {expandedId && clients.find(c => c.id === expandedId) && (
-            <ClientProfilePanel
-              clientId={expandedId}
-              color={CAT_COLORS[clients.find(c=>c.id===expandedId)?.category] || 'var(--primary)'}
-              onEdit={cl=>setModal(cl)}
-              onDelete={handleDelete}
-              allRanked={insights?.allRanked||[]}
-              kpis={kpis}
-              onClose={()=>setExpandedId(null)}
-            />
-          )}
-        </div>{/* end directory view */}
+        </div>
       )}
 
       {/* ══ INSIGHTS VIEW ═══════════════════════════════════════════════ */}
@@ -1121,27 +1129,21 @@ export default function Clients() {
           width: 100%;
           box-sizing: border-box;
           overflow: hidden;
-          border-radius: var(--radius);
-          border: 1px solid var(--border);
-          background: var(--bg);
+          /* push content away from the edges on mobile */
           padding-bottom: 12px;
-        }
-
-        /* Force every element inside to stay within bounds */
-        .client-expanded-wrap * {
-          box-sizing: border-box;
-          min-width: 0;
         }
 
         /* ── Tab content: safe padding, no overflow ───────────────── */
         .client-tab-content {
           padding: 16px 12px;
+          box-sizing: border-box;
           width: 100%;
           overflow: hidden;
         }
 
-        /* ── Cards inside expanded panel: truly full-width ──────────  */
+        /* ── Cards inside expanded row: full-width, no bleed ────────  */
         .client-expanded-wrap .card {
+          box-sizing: border-box;
           width: 100%;
           margin-left: 0 !important;
           margin-right: 0 !important;
