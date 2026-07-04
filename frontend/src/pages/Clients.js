@@ -204,41 +204,43 @@ function ClientProfileRow({ clientId, onEdit, onDelete, allRanked, kpis }) {
   return (
     <tr>
       <td colSpan={9} style={{ padding:0, background:'var(--bg)', borderBottom:`3px solid ${color}55` }}>
+        <div className="client-expanded-wrap">
 
         {/* ── Profile Header ─────────────────────────────────────────── */}
         <div style={{
           background:`linear-gradient(135deg, ${color}10 0%, var(--bg) 60%)`,
           borderTop:`3px solid ${color}`,
-          padding:'18px 24px 14px',
-          display:'flex', alignItems:'flex-start', gap:16, flexWrap:'wrap',
+          padding:'16px 16px 12px',
+          display:'flex', alignItems:'flex-start', gap:12, flexWrap:'wrap',
+          boxSizing:'border-box', width:'100%',
         }}>
-          <Avatar name={client.name} size={50} color={color}/>
-          <div style={{ flex:1, minWidth:200 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:5 }}>
-              <span style={{ fontSize:17, fontWeight:800, color:'var(--text)' }}>{client.name}</span>
+          <Avatar name={client.name} size={44} color={color}/>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', marginBottom:5 }}>
+              <span style={{ fontSize:16, fontWeight:800, color:'var(--text)' }}>{client.name}</span>
               <StatusBadge status={client.status}/>
               <CatBadge cat={client.category}/>
-              <span style={{ fontSize:11, color:'var(--text-muted)', fontFamily:'monospace', background:'var(--card)', border:'1px solid var(--border)', borderRadius:5, padding:'1px 6px' }}>{client.client_code}</span>
+              <span style={{ fontSize:10.5, color:'var(--text-muted)', fontFamily:'monospace', background:'var(--card)', border:'1px solid var(--border)', borderRadius:5, padding:'1px 6px' }}>{client.client_code}</span>
             </div>
             {client.company_name && <div style={{ fontSize:13, color:'var(--text-muted)', marginBottom:6 }}>{client.company_name}</div>}
             {/* Quick stat strip */}
-            <div style={{ display:'flex', flexWrap:'wrap', gap:16 }}>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
               {[
-                [DollarSign, fmt.currency(lifetime?.revenue||0),             'Revenue',       color],
-                [ShoppingCart, lifetime?.orders||0,                          'Orders',        'var(--blue)'],
-                [Package, `${fmt.number(lifetime?.bags||0)} bags`,           'Volume',        'var(--green)'],
-                [Clock, fmt.date(lifetime?.last_date)||'Never',              'Last Purchase', 'var(--text-muted)'],
+                [DollarSign, fmt.currency(lifetime?.revenue||0),   'Revenue',       color],
+                [ShoppingCart, lifetime?.orders||0,                 'Orders',        'var(--blue)'],
+                [Package, `${fmt.number(lifetime?.bags||0)} bags`,  'Volume',        'var(--green)'],
+                [Clock, fmt.date(lifetime?.last_date)||'Never',     'Last Purchase', 'var(--text-muted)'],
               ].map(([Icon, val, lbl, c]) => (
-                <div key={lbl} style={{ display:'flex', alignItems:'center', gap:5 }}>
-                  <Icon size={12} style={{ color:c, flexShrink:0 }}/>
-                  <span style={{ fontSize:12, color:'var(--text-muted)' }}>{lbl}:</span>
-                  <span style={{ fontSize:12.5, fontWeight:700, color:c }}>{val}</span>
+                <div key={lbl} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <Icon size={11} style={{ color:c, flexShrink:0 }}/>
+                  <span style={{ fontSize:11.5, color:'var(--text-muted)' }}>{lbl}:</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:c }}>{val}</span>
                 </div>
               ))}
               {revenueRank && (
-                <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-                  <Award size={12} style={{ color:'var(--gold)' }}/>
-                  <span style={{ fontSize:12.5, fontWeight:700, color:'var(--gold)' }}>Ranked #{revenueRank} of {totalClients}</span>
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <Award size={11} style={{ color:'var(--gold)' }}/>
+                  <span style={{ fontSize:12, fontWeight:700, color:'var(--gold)' }}>#{revenueRank} of {totalClients}</span>
                 </div>
               )}
             </div>
@@ -425,8 +427,8 @@ function ClientProfileRow({ clientId, onEdit, onDelete, allRanked, kpis }) {
                   <div style={{ fontWeight:600 }}>No transactions {orderPeriod==='monthly'?'this month':'yet'}</div>
                 </div>
               ) : (
-                <div className="table-wrap" style={{ borderRadius:10, overflowX:'auto', WebkitOverflowScrolling:'touch' }}>
-                  <table style={{ minWidth:520 }}>
+                <div style={{ overflowX:'auto', WebkitOverflowScrolling:'touch', borderRadius:10, border:'1px solid var(--border)' }}>
+                  <table style={{ minWidth:520, width:'100%' }}>
                     <thead>
                       <tr><th>Date</th><th>Invoice</th><th>Qty (Bags)</th><th>Unit Price</th><th>Total</th><th>Method</th><th>Status</th></tr>
                     </thead>
@@ -588,7 +590,8 @@ function ClientProfileRow({ clientId, onEdit, onDelete, allRanked, kpis }) {
               ))}
             </div>
           )}
-        </div>
+        </div>{/* end client-tab-content */}
+        </div>{/* end viewport-constrain wrapper */}
       </td>
     </tr>
   );
@@ -1100,14 +1103,32 @@ export default function Clients() {
           gap: 16px;
         }
 
-        /* ── Overview cards — single col on mobile ────────────────── */
+        /* ── Contain the expanded row so it never exceeds viewport ── */
+        .client-expanded-wrap {
+          width: 100%;
+          max-width: 100vw;
+          overflow-x: hidden;
+          box-sizing: border-box;
+        }
+
+        /* Orders-only horizontal scroll container */
+        .client-orders-table-scroll {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          width: 100%;
+        }
+        .client-orders-table-scroll table {
+          min-width: 520px;
+        }
+
+        /* ── Overview cards ───────────────────────────────────────── */
         .client-overview-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
           gap: 16px;
         }
 
-        /* ── Orders summary stats — 2-col on mobile ───────────────── */
+        /* ── Orders summary stats ─────────────────────────────────── */
         .client-orders-stats {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -1115,7 +1136,7 @@ export default function Clients() {
           margin-bottom: 18px;
         }
 
-        /* ── Analytics charts grid — 2-col desktop, 1-col mobile ─── */
+        /* ── Analytics charts grid ────────────────────────────────── */
         .client-charts-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -1155,10 +1176,16 @@ export default function Clients() {
           flex-shrink: 0;
         }
         .client-tab-btn:hover { color: var(--text); background: var(--bg); }
-        .client-tab-active { color: var(--primary) !important; border-bottom-color: var(--primary) !important; }
+        .client-tab-active    { color: var(--primary) !important; border-bottom-color: var(--primary) !important; }
 
-        /* Tab content padding */
-        .client-tab-content { padding: 22px 24px; }
+        /* Tab content */
+        .client-tab-content {
+          padding: 22px 24px;
+          box-sizing: border-box;
+          width: 100%;
+          max-width: 100%;
+          overflow-x: hidden;
+        }
 
         /* ── Expand chevron button ────────────────────────────────── */
         .client-expand-btn {
@@ -1186,21 +1213,21 @@ export default function Clients() {
           display: flex; align-items: center; justify-content: center;
           transition: background 0.15s, color 0.15s, transform 0.15s;
         }
-        .client-action-btn:hover { background: var(--primary-pale); color: var(--primary); transform: scale(1.08); }
-        .client-action-btn[style*="var(--red)"]:hover { background: #FEE2E2; color: var(--red) !important; }
+        .client-action-btn:hover { background: var(--primary-pale); color: var(--primary) !important; transform: scale(1.08); }
+        .client-action-btn.danger:hover { background: #FEE2E2 !important; color: var(--red) !important; }
 
-        /* ── Global button hover enhancements ─────────────────────── */
-        .btn:active { transform: scale(0.96); }
+        /* ── Global button hover ──────────────────────────────────── */
+        .btn:active        { transform: scale(0.96); }
         .btn-primary:hover { filter: brightness(1.07); }
-        .btn-ghost:hover { background: var(--primary-pale); color: var(--primary); border-color: var(--primary); }
+        .btn-ghost:hover   { background: var(--primary-pale); color: var(--primary); border-color: var(--primary); }
 
-        /* ── Mobile overrides ─────────────────────────────────────── */
+        /* ── Mobile ───────────────────────────────────────────────── */
         @media (max-width: 640px) {
           .insights-top-grid    { grid-template-columns: 1fr; }
           .client-overview-grid { grid-template-columns: 1fr; }
           .client-charts-grid   { grid-template-columns: 1fr; }
           .client-orders-stats  { grid-template-columns: 1fr 1fr; }
-          .client-tab-content   { padding: 16px 12px; }
+          .client-tab-content   { padding: 14px 12px; }
           .client-tabs-bar      { top: 56px; }
         }
       `}</style>
