@@ -206,49 +206,68 @@ function ClientProfileRow({ clientId, onEdit, onDelete, allRanked, kpis }) {
       <td colSpan={9} style={{ padding:0, background:'var(--bg)', borderBottom:`3px solid ${color}55` }}>
         <div className="client-expanded-wrap">
 
-        {/* ── Profile Header ─────────────────────────────────────────── */}
+        {/* ── Client Summary Card ────────────────────────────────────── */}
         <div style={{
-          background:`linear-gradient(135deg, ${color}10 0%, var(--bg) 60%)`,
+          margin:'12px 12px 0',
+          background:'var(--card)',
+          border:`1px solid var(--border)`,
           borderTop:`3px solid ${color}`,
-          padding:'16px 16px 12px',
-          display:'flex', alignItems:'flex-start', gap:12, flexWrap:'wrap',
-          boxSizing:'border-box', width:'100%',
+          borderRadius:'var(--radius)',
+          boxShadow:'var(--shadow)',
+          overflow:'hidden',
         }}>
-          <Avatar name={client.name} size={44} color={color}/>
-          <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', marginBottom:5 }}>
-              <span style={{ fontSize:16, fontWeight:800, color:'var(--text)' }}>{client.name}</span>
-              <StatusBadge status={client.status}/>
-              <CatBadge cat={client.category}/>
-              <span style={{ fontSize:10.5, color:'var(--text-muted)', fontFamily:'monospace', background:'var(--card)', border:'1px solid var(--border)', borderRadius:5, padding:'1px 6px' }}>{client.client_code}</span>
-            </div>
-            {client.company_name && <div style={{ fontSize:13, color:'var(--text-muted)', marginBottom:6 }}>{client.company_name}</div>}
-            {/* Quick stat strip */}
-            <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
-              {[
-                [DollarSign, fmt.currency(lifetime?.revenue||0),   'Revenue',       color],
-                [ShoppingCart, lifetime?.orders||0,                 'Orders',        'var(--blue)'],
-                [Package, `${fmt.number(lifetime?.bags||0)} bags`,  'Volume',        'var(--green)'],
-                [Clock, fmt.date(lifetime?.last_date)||'Never',     'Last Purchase', 'var(--text-muted)'],
-              ].map(([Icon, val, lbl, c]) => (
-                <div key={lbl} style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <Icon size={11} style={{ color:c, flexShrink:0 }}/>
-                  <span style={{ fontSize:11.5, color:'var(--text-muted)' }}>{lbl}:</span>
-                  <span style={{ fontSize:12, fontWeight:700, color:c }}>{val}</span>
+          {/* Gradient header strip */}
+          <div style={{
+            background:`linear-gradient(135deg, ${color}15 0%, var(--card) 100%)`,
+            padding:'16px 16px 14px',
+          }}>
+            <div style={{ display:'flex', alignItems:'flex-start', gap:12, flexWrap:'wrap' }}>
+              <Avatar name={client.name} size={44} color={color}/>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap', marginBottom:4 }}>
+                  <span style={{ fontSize:16, fontWeight:800, color:'var(--text)' }}>{client.name}</span>
+                  <StatusBadge status={client.status}/>
                 </div>
-              ))}
-              {revenueRank && (
-                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <Award size={11} style={{ color:'var(--gold)' }}/>
-                  <span style={{ fontSize:12, fontWeight:700, color:'var(--gold)' }}>#{revenueRank} of {totalClients}</span>
+                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:6 }}>
+                  <CatBadge cat={client.category}/>
+                  <span style={{ fontSize:10.5, color:'var(--text-muted)', fontFamily:'monospace', background:'var(--bg)', border:'1px solid var(--border)', borderRadius:5, padding:'1px 6px' }}>{client.client_code}</span>
                 </div>
-              )}
+                {client.company_name && <div style={{ fontSize:12.5, color:'var(--text-muted)' }}>{client.company_name}</div>}
+              </div>
+              <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                <button className="btn btn-ghost btn-sm" onClick={()=>onEdit(client)}><Edit2 size={13}/> Edit</button>
+                <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={()=>onDelete(client.id,client.name)}><Trash2 size={13}/></button>
+              </div>
             </div>
           </div>
-          <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-            <button className="btn btn-ghost btn-sm" onClick={()=>onEdit(client)}><Edit2 size={13}/> Edit</button>
-            <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={()=>onDelete(client.id,client.name)}><Trash2 size={13}/></button>
+
+          {/* Stats row */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', borderTop:`1px solid var(--border)` }}>
+            {[
+              [DollarSign, fmt.currency(lifetime?.revenue||0),  'Revenue',       color],
+              [ShoppingCart, lifetime?.orders||0,               'Orders',        'var(--blue)'],
+              [Package, fmt.number(lifetime?.bags||0)+' bags',  'Volume',        'var(--green)'],
+              [Clock, fmt.date(lifetime?.last_date)||'Never',   'Last Purchase', 'var(--text-muted)'],
+            ].map(([Icon, val, lbl, c], i) => (
+              <div key={lbl} style={{
+                padding:'10px 8px', textAlign:'center',
+                borderRight: i < 3 ? `1px solid var(--border)` : 'none',
+              }}>
+                <Icon size={13} style={{ color:c, marginBottom:3 }}/>
+                <div style={{ fontSize:11.5, fontWeight:800, color:c, lineHeight:1.2 }}>{val}</div>
+                <div style={{ fontSize:10, color:'var(--text-muted)', marginTop:2 }}>{lbl}</div>
+              </div>
+            ))}
           </div>
+
+          {/* Rank strip — only if ranked */}
+          {revenueRank && (
+            <div style={{ padding:'8px 16px', borderTop:`1px solid var(--border)`, background:'var(--bg)', display:'flex', alignItems:'center', gap:8 }}>
+              <Award size={12} style={{ color:'var(--gold)', flexShrink:0 }}/>
+              <span style={{ fontSize:12, fontWeight:700, color:'var(--gold)' }}>Ranked #{revenueRank} of {totalClients} by revenue</span>
+              {revenueShare > 0 && <span style={{ fontSize:11.5, color:'var(--text-muted)', marginLeft:'auto' }}>{fmt.percent(revenueShare)} of total</span>}
+            </div>
+          )}
         </div>
 
         {/* ── Tabs — sticky ──────────────────────────────────────────── */}
@@ -824,8 +843,9 @@ export default function Clients() {
             </div>
           )}
 
-          <div className="card">
-            <div className="table-wrap">
+          <div className="card" style={{ overflow:'hidden' }}>
+            <div style={{ overflowX:'auto', WebkitOverflowScrolling:'touch' }}>
+            <div className="table-wrap" style={{ minWidth:640 }}>
               {loading ? (
                 <div style={{ textAlign:'center', padding:48 }}>
                   <div style={{ width:32, height:32, border:'3px solid var(--primary-pale)', borderTopColor:'var(--primary)', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto' }}/>
@@ -874,8 +894,8 @@ export default function Clients() {
                           <td><StatusBadge status={c.status}/></td>
                           <td>
                             <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                              <button className="btn btn-ghost btn-sm client-action-btn" onClick={e=>{ e.stopPropagation(); setModal(c); }} title="Edit"><Edit2 size={12}/></button>
-                              <button className="btn btn-ghost btn-sm client-action-btn" style={{ color:'var(--red)' }} onClick={e=>{ e.stopPropagation(); handleDelete(c.id,c.name); }} title="Delete"><Trash2 size={12}/></button>
+                              <button className="btn btn-ghost btn-sm client-action-btn" onClick={e=>{ e.stopPropagation(); setModal(c); }} title="Edit"><Edit2 size={13}/></button>
+                              <button className="btn btn-ghost btn-sm client-action-btn delete" onClick={e=>{ e.stopPropagation(); handleDelete(c.id,c.name); }} title="Delete"><Trash2 size={13}/></button>
                               <button
                                 className="client-expand-btn"
                                 onClick={e=>{ e.stopPropagation(); setExpandedId(expandedId===c.id ? null : c.id); }}
@@ -901,7 +921,8 @@ export default function Clients() {
                   </tbody>
                 </table>
               )}
-            </div>
+            </div>{/* end table-wrap */}
+            </div>{/* end scroll wrapper */}
 
             {totalPages > 1 && (
               <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -1096,59 +1117,71 @@ export default function Clients() {
       )}
 
       <style>{`
-        /* ── Insights top grid ────────────────────────────────────── */
+        /* ── Insights grid: 2-col desktop, 1-col mobile ────────────── */
         .insights-top-grid {
           display: grid;
           grid-template-columns: 1.4fr 1fr;
           gap: 16px;
         }
 
-        /* ── Contain the expanded row so it never exceeds viewport ── */
+        /* ── Expanded row: hard-clamp to viewport, never overflow ─── */
         .client-expanded-wrap {
           width: 100%;
-          max-width: 100vw;
-          overflow-x: hidden;
           box-sizing: border-box;
+          overflow: hidden;
+          /* push content away from the edges on mobile */
+          padding-bottom: 12px;
         }
 
-        /* Orders-only horizontal scroll container */
-        .client-orders-table-scroll {
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
+        /* ── Tab content: safe padding, no overflow ───────────────── */
+        .client-tab-content {
+          padding: 16px 12px;
+          box-sizing: border-box;
           width: 100%;
-        }
-        .client-orders-table-scroll table {
-          min-width: 520px;
+          overflow: hidden;
         }
 
-        /* ── Overview cards ───────────────────────────────────────── */
+        /* ── Cards inside expanded row: full-width, no bleed ────────  */
+        .client-expanded-wrap .card {
+          box-sizing: border-box;
+          width: 100%;
+          margin-left: 0 !important;
+          margin-right: 0 !important;
+        }
+
+        /* ── Overview cards: 3-col desktop → 1-col mobile ─────────── */
         .client-overview-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 16px;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 12px;
+          box-sizing: border-box;
+          width: 100%;
         }
 
-        /* ── Orders summary stats ─────────────────────────────────── */
+        /* ── Orders stats: auto desktop → 2-col mobile ─────────────── */
         .client-orders-stats {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-          gap: 10px;
-          margin-bottom: 18px;
+          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+          gap: 8px;
+          margin-bottom: 16px;
+          box-sizing: border-box;
+          width: 100%;
         }
 
-        /* ── Analytics charts grid ────────────────────────────────── */
+        /* ── Analytics charts: 2-col desktop → 1-col mobile ────────── */
         .client-charts-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 14px;
+          gap: 12px;
+          box-sizing: border-box;
+          width: 100%;
         }
 
-        /* ── Sticky tabs bar ─────────────────────────────────────── */
+        /* ── Sticky tabs ──────────────────────────────────────────── */
         .client-tabs-bar {
           display: flex;
           border-bottom: 1px solid var(--border);
           background: var(--card);
-          padding-left: 8px;
           overflow-x: auto;
           position: sticky;
           top: 60px;
@@ -1162,7 +1195,7 @@ export default function Clients() {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 10px 18px;
+          padding: 10px 16px;
           border: none;
           cursor: pointer;
           background: none;
@@ -1175,21 +1208,12 @@ export default function Clients() {
           white-space: nowrap;
           flex-shrink: 0;
         }
-        .client-tab-btn:hover { color: var(--text); background: var(--bg); }
-        .client-tab-active    { color: var(--primary) !important; border-bottom-color: var(--primary) !important; }
+        .client-tab-btn:hover  { color: var(--text); background: var(--bg); }
+        .client-tab-active     { color: var(--primary) !important; border-bottom-color: var(--primary) !important; }
 
-        /* Tab content */
-        .client-tab-content {
-          padding: 22px 24px;
-          box-sizing: border-box;
-          width: 100%;
-          max-width: 100%;
-          overflow-x: hidden;
-        }
-
-        /* ── Expand chevron button ────────────────────────────────── */
+        /* ── Expand chevron circle ────────────────────────────────── */
         .client-expand-btn {
-          width: 28px; height: 28px;
+          width: 30px; height: 30px;
           border-radius: 50%;
           border: 1.5px solid var(--border);
           background: var(--bg);
@@ -1206,28 +1230,46 @@ export default function Clients() {
           transform: scale(1.1);
         }
 
-        /* ── Action buttons hover ─────────────────────────────────── */
+        /* ── Table action buttons (edit/delete) ───────────────────── */
         .client-action-btn {
-          width: 28px; height: 28px;
-          border-radius: 7px;
-          display: flex; align-items: center; justify-content: center;
-          transition: background 0.15s, color 0.15s, transform 0.15s;
+          width: 28px !important;
+          height: 28px !important;
+          min-width: 28px !important;
+          padding: 0 !important;
+          border-radius: 7px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          border: 1.5px solid var(--border) !important;
+          background: var(--card) !important;
+          color: var(--text-muted) !important;
+          transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+          opacity: 1 !important;
+          visibility: visible !important;
         }
-        .client-action-btn:hover { background: var(--primary-pale); color: var(--primary) !important; transform: scale(1.08); }
-        .client-action-btn.danger:hover { background: #FEE2E2 !important; color: var(--red) !important; }
+        .client-action-btn:hover {
+          background: var(--primary-pale) !important;
+          color: var(--primary) !important;
+          border-color: var(--primary) !important;
+          transform: scale(1.08);
+        }
+        .client-action-btn.delete:hover {
+          background: #FEE2E2 !important;
+          color: var(--red) !important;
+          border-color: var(--red) !important;
+        }
 
-        /* ── Global button hover ──────────────────────────────────── */
+        /* ── Global button polish ─────────────────────────────────── */
         .btn:active        { transform: scale(0.96); }
         .btn-primary:hover { filter: brightness(1.07); }
-        .btn-ghost:hover   { background: var(--primary-pale); color: var(--primary); border-color: var(--primary); }
 
-        /* ── Mobile ───────────────────────────────────────────────── */
+        /* ── Mobile overrides ─────────────────────────────────────── */
         @media (max-width: 640px) {
           .insights-top-grid    { grid-template-columns: 1fr; }
           .client-overview-grid { grid-template-columns: 1fr; }
           .client-charts-grid   { grid-template-columns: 1fr; }
           .client-orders-stats  { grid-template-columns: 1fr 1fr; }
-          .client-tab-content   { padding: 14px 12px; }
+          .client-tab-content   { padding: 12px 10px; }
           .client-tabs-bar      { top: 56px; }
         }
       `}</style>
