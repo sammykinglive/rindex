@@ -601,8 +601,8 @@ function ClientProfilePanel({ clientId, onEdit, onDelete, onClose, allRanked, kp
               ))}
             </div>
           )}
-        </div>{/* end client-tab-content */}
-    </div>{/* end client-expanded-wrap */}
+        </div>
+      </div>
   );
 }
 
