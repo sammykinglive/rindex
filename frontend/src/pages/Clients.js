@@ -249,28 +249,21 @@ function ClientProfileRow({ clientId, onEdit, onDelete, allRanked, kpis }) {
           </div>
         </div>
 
-        {/* ── Tabs ───────────────────────────────────────────────────── */}
-        <div style={{ display:'flex', borderBottom:'1px solid var(--border)', background:'var(--card)', paddingLeft:8, overflowX:'auto' }}>
+        {/* ── Tabs — sticky ──────────────────────────────────────────── */}
+        <div className="client-tabs-bar">
           {TABS.map(({ key, label, icon: Icon }) => (
-            <button key={key} onClick={()=>setActiveTab(key)} style={{
-              display:'flex', alignItems:'center', gap:6,
-              padding:'10px 18px', border:'none', cursor:'pointer', background:'none',
-              fontFamily:'var(--font)', fontWeight:600, fontSize:12.5,
-              color: activeTab===key ? 'var(--primary)' : 'var(--text-muted)',
-              borderBottom: activeTab===key ? '2px solid var(--primary)' : '2px solid transparent',
-              transition:'all 0.15s', whiteSpace:'nowrap', flexShrink:0,
-            }}>
+            <button key={key} onClick={()=>setActiveTab(key)} className={`client-tab-btn${activeTab===key?' client-tab-active':''}`}>
               <Icon size={13}/> {label}
             </button>
           ))}
         </div>
 
         {/* ── Tab Content ────────────────────────────────────────────── */}
-        <div style={{ padding:'22px 24px' }}>
+        <div className="client-tab-content">
 
           {/* ─ OVERVIEW ─ */}
           {activeTab === 'overview' && (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:16 }}>
+            <div className="client-overview-grid">
 
               {/* Contact info */}
               <div className="card" style={{ marginBottom:0 }}>
@@ -416,7 +409,7 @@ function ClientProfileRow({ clientId, onEdit, onDelete, allRanked, kpis }) {
               </div>
 
               {/* Period summary */}
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(130px,1fr))', gap:10, marginBottom:18 }}>
+              <div className="client-orders-stats">
                 <StatMini label="Orders"    value={periodStats.orders}                color="var(--blue)"/>
                 <StatMini label="Bags"      value={`${fmt.number(periodStats.bags)} bags`} color="var(--green)"/>
                 <StatMini label="Revenue"   value={fmt.currency(periodStats.revenue)} color={color}/>
@@ -432,8 +425,8 @@ function ClientProfileRow({ clientId, onEdit, onDelete, allRanked, kpis }) {
                   <div style={{ fontWeight:600 }}>No transactions {orderPeriod==='monthly'?'this month':'yet'}</div>
                 </div>
               ) : (
-                <div className="table-wrap" style={{ borderRadius:10, overflow:'hidden' }}>
-                  <table>
+                <div className="table-wrap" style={{ borderRadius:10, overflowX:'auto', WebkitOverflowScrolling:'touch' }}>
+                  <table style={{ minWidth:520 }}>
                     <thead>
                       <tr><th>Date</th><th>Invoice</th><th>Qty (Bags)</th><th>Unit Price</th><th>Total</th><th>Method</th><th>Status</th></tr>
                     </thead>
@@ -506,7 +499,7 @@ function ClientProfileRow({ clientId, onEdit, onDelete, allRanked, kpis }) {
                   </div>
 
                   {/* Bags bar + Orders line side by side */}
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                  <div className="client-charts-grid">
                     <div className="card" style={{ marginBottom:0 }}>
                       <div className="card-header">
                         <span className="card-title">Bags Purchased</span>
@@ -877,10 +870,16 @@ export default function Clients() {
                           <td style={{ fontSize:12, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{c.last_purchase_date ? fmt.date(c.last_purchase_date) : '—'}</td>
                           <td><StatusBadge status={c.status}/></td>
                           <td>
-                            <div style={{ display:'flex', gap:4, alignItems:'center' }}>
-                              <button className="btn btn-ghost btn-sm" onClick={e=>{ e.stopPropagation(); setModal(c); }} title="Edit"><Edit2 size={12}/></button>
-                              <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={e=>{ e.stopPropagation(); handleDelete(c.id,c.name); }} title="Delete"><Trash2 size={12}/></button>
-                              {expandedId===c.id ? <ChevronUp size={14} style={{ color:'var(--primary)' }}/> : <ChevronDown size={14} style={{ color:'var(--text-muted)' }}/>}
+                            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+                              <button className="btn btn-ghost btn-sm client-action-btn" onClick={e=>{ e.stopPropagation(); setModal(c); }} title="Edit"><Edit2 size={12}/></button>
+                              <button className="btn btn-ghost btn-sm client-action-btn" style={{ color:'var(--red)' }} onClick={e=>{ e.stopPropagation(); handleDelete(c.id,c.name); }} title="Delete"><Trash2 size={12}/></button>
+                              <button
+                                className="client-expand-btn"
+                                onClick={e=>{ e.stopPropagation(); setExpandedId(expandedId===c.id ? null : c.id); }}
+                                title={expandedId===c.id ? 'Collapse' : 'Expand'}
+                              >
+                                {expandedId===c.id ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1093,17 +1092,116 @@ export default function Clients() {
         />
       )}
 
-      {/* Responsive CSS */}
       <style>{`
+        /* ── Insights top grid ────────────────────────────────────── */
         .insights-top-grid {
           display: grid;
           grid-template-columns: 1.4fr 1fr;
           gap: 16px;
         }
+
+        /* ── Overview cards — single col on mobile ────────────────── */
+        .client-overview-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 16px;
+        }
+
+        /* ── Orders summary stats — 2-col on mobile ───────────────── */
+        .client-orders-stats {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+          gap: 10px;
+          margin-bottom: 18px;
+        }
+
+        /* ── Analytics charts grid — 2-col desktop, 1-col mobile ─── */
+        .client-charts-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+        }
+
+        /* ── Sticky tabs bar ─────────────────────────────────────── */
+        .client-tabs-bar {
+          display: flex;
+          border-bottom: 1px solid var(--border);
+          background: var(--card);
+          padding-left: 8px;
+          overflow-x: auto;
+          position: sticky;
+          top: 60px;
+          z-index: 20;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .client-tabs-bar::-webkit-scrollbar { display: none; }
+
+        .client-tab-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 10px 18px;
+          border: none;
+          cursor: pointer;
+          background: none;
+          font-family: var(--font);
+          font-weight: 600;
+          font-size: 12.5px;
+          color: var(--text-muted);
+          border-bottom: 2px solid transparent;
+          transition: color 0.15s, border-color 0.15s, background 0.15s;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .client-tab-btn:hover { color: var(--text); background: var(--bg); }
+        .client-tab-active { color: var(--primary) !important; border-bottom-color: var(--primary) !important; }
+
+        /* Tab content padding */
+        .client-tab-content { padding: 22px 24px; }
+
+        /* ── Expand chevron button ────────────────────────────────── */
+        .client-expand-btn {
+          width: 28px; height: 28px;
+          border-radius: 50%;
+          border: 1.5px solid var(--border);
+          background: var(--bg);
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: var(--text-muted);
+          transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+          flex-shrink: 0;
+        }
+        .client-expand-btn:hover {
+          background: var(--primary-pale);
+          border-color: var(--primary);
+          color: var(--primary);
+          transform: scale(1.1);
+        }
+
+        /* ── Action buttons hover ─────────────────────────────────── */
+        .client-action-btn {
+          width: 28px; height: 28px;
+          border-radius: 7px;
+          display: flex; align-items: center; justify-content: center;
+          transition: background 0.15s, color 0.15s, transform 0.15s;
+        }
+        .client-action-btn:hover { background: var(--primary-pale); color: var(--primary); transform: scale(1.08); }
+        .client-action-btn[style*="var(--red)"]:hover { background: #FEE2E2; color: var(--red) !important; }
+
+        /* ── Global button hover enhancements ─────────────────────── */
+        .btn:active { transform: scale(0.96); }
+        .btn-primary:hover { filter: brightness(1.07); }
+        .btn-ghost:hover { background: var(--primary-pale); color: var(--primary); border-color: var(--primary); }
+
+        /* ── Mobile overrides ─────────────────────────────────────── */
         @media (max-width: 640px) {
-          .insights-top-grid {
-            grid-template-columns: 1fr;
-          }
+          .insights-top-grid    { grid-template-columns: 1fr; }
+          .client-overview-grid { grid-template-columns: 1fr; }
+          .client-charts-grid   { grid-template-columns: 1fr; }
+          .client-orders-stats  { grid-template-columns: 1fr 1fr; }
+          .client-tab-content   { padding: 16px 12px; }
+          .client-tabs-bar      { top: 56px; }
         }
       `}</style>
     </div>
