@@ -133,9 +133,9 @@ export default function Receipts() {
 
   // Load active commodities once
   useEffect(() => {
-    api.get('/commodities').then(r => {
-      setCommodities(r.data.filter(c => c.is_active));
-    }).catch(() => {});
+    api.get('/commodities')
+      .then(r => setCommodities((r.data || []).filter(c => c.is_active)))
+      .catch(() => setCommodities([]));
   }, []);
 
   const load = useCallback(() => {
