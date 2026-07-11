@@ -5,7 +5,14 @@ const { authMiddleware, adminOnly } = require('../middleware/auth');
 const router = express.Router();
 
 async function migrateExpenses() {
-  const cols = ['date TEXT', 'paid_by TEXT', 'paid_to TEXT', 'receipt_no TEXT', "payment_method TEXT DEFAULT 'Cash'"];
+  const cols = [
+    'date TEXT',
+    'paid_by TEXT',
+    'paid_to TEXT',
+    'receipt_no TEXT',
+    "payment_method TEXT DEFAULT 'Cash'",
+    'commodity_id INTEGER',
+  ];
   for (const col of cols) {
     try { await run(`ALTER TABLE expenses ADD COLUMN ${col}`); } catch(e) {}
   }
@@ -127,25 +134,87 @@ router.put('/settings', authMiddleware, adminOnly, async (req, res) => {
 router.get('/expenses', authMiddleware, async (req, res) => {
   try {
     const now = new Date();
-    const m = parseInt(req.query.month) || now.getMonth()+1;
-    const y = parseInt(req.query.year)  || now.getFullYear();
-    const expenses   = await all('SELECT * FROM expenses WHERE month=? AND year=? ORDER BY date DESC, created_at DESC', [m, y]);
-    const totalRow   = await get('SELECT COALESCE(SUM(amount),0) as v FROM expenses WHERE month=? AND year=?', [m, y]);
-    const byCategory = await all('SELECT category, COALESCE(SUM(amount),0) as total FROM expenses WHERE month=? AND year=? GROUP BY category ORDER BY total DESC', [m, y]);
-    res.json({ expenses, total: totalRow.v, byCategory });
-  } catch (err) { res.status(500).json({ error: 'Server error.' }); }
+    const { allTime, allYear, month, year, commodity_id } = req.query;
+    const MONTH_NAMES_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    // Build commodity filter clause
+    const commClause = commodity_id ? ` AND commodity_id = ${parseInt(commodity_id)}` : '';
+    const commClauseInit = commodity_id ? ` WHERE commodity_id = ${parseInt(commodity_id)}` : '';
+
+    let expenses, totalRow, byCategory, trend;
+
+    if (allTime === 'true') {
+      expenses   = await all(`SELECT * FROM expenses WHERE 1=1${commClause} ORDER BY date DESC, created_at DESC`);
+      totalRow   = await get(`SELECT COALESCE(SUM(amount),0) as v FROM expenses WHERE 1=1${commClause}`);
+      byCategory = await all(`SELECT category, COALESCE(SUM(amount),0) as total FROM expenses WHERE 1=1${commClause} GROUP BY category ORDER BY total DESC`);
+      const yearlyRows = await all(`SELECT year, COALESCE(SUM(amount),0) as total FROM expenses WHERE 1=1${commClause} GROUP BY year ORDER BY year ASC`);
+      trend = yearlyRows.map(r => ({ label: String(r.year), total: r.total }));
+
+    } else if (allYear === 'true') {
+      const y = parseInt(year) || now.getFullYear();
+      expenses   = await all(`SELECT * FROM expenses WHERE year=?${commClause} ORDER BY date DESC, created_at DESC`, [y]);
+      totalRow   = await get(`SELECT COALESCE(SUM(amount),0) as v FROM expenses WHERE year=?${commClause}`, [y]);
+      byCategory = await all(`SELECT category, COALESCE(SUM(amount),0) as total FROM expenses WHERE year=?${commClause} GROUP BY category ORDER BY total DESC`, [y]);
+      const monthlyRows = await all(`SELECT month, COALESCE(SUM(amount),0) as total FROM expenses WHERE year=?${commClause} GROUP BY month ORDER BY month ASC`, [y]);
+      trend = MONTH_NAMES_SHORT.map((name, i) => {
+        const found = monthlyRows.find(r => r.month === i + 1);
+        return { label: name, total: found ? found.total : 0 };
+      });
+
+    } else {
+      const m = parseInt(month) || now.getMonth()+1;
+      const y = parseInt(year)  || now.getFullYear();
+      expenses   = await all(`SELECT * FROM expenses WHERE month=? AND year=?${commClause} ORDER BY date DESC, created_at DESC`, [m, y]);
+      totalRow   = await get(`SELECT COALESCE(SUM(amount),0) as v FROM expenses WHERE month=? AND year=?${commClause}`, [m, y]);
+      byCategory = await all(`SELECT category, COALESCE(SUM(amount),0) as total FROM expenses WHERE month=? AND year=?${commClause} GROUP BY category ORDER BY total DESC`, [m, y]);
+      // Trend: last 6 months
+      const trendMonths = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(y, m - 1 - i, 1);
+        trendMonths.push({ month: d.getMonth()+1, year: d.getFullYear(), label: MONTH_NAMES_SHORT[d.getMonth()] });
+      }
+      trend = [];
+      for (const tm of trendMonths) {
+        const r = await get(`SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE month=? AND year=?${commClause}`, [tm.month, tm.year]);
+        trend.push({ label: tm.label, total: r.total });
+      }
+    }
+
+    // Attach commodity names
+    let commMap = {};
+    try {
+      const comms = await all(`SELECT id, name FROM commodities`);
+      comms.forEach(c => { commMap[c.id] = c.name; });
+    } catch(_) {}
+    const enriched = expenses.map(e => ({ ...e, commodity_name: commMap[e.commodity_id] || null }));
+
+    res.json({ expenses: enriched, total: totalRow ? totalRow.v : 0, byCategory, trend });
+  } catch (err) { console.error('GET /expenses error:', err.message); res.status(500).json({ error: err.message }); }
 });
 
 router.post('/expenses', authMiddleware, async (req, res) => {
   try {
-    const { category, amount, description, month, year, date, paid_by, paid_to, receipt_no, payment_method } = req.body;
+    const { category, amount, description, month, year, date, paid_by, paid_to, receipt_no, payment_method, commodity_id } = req.body;
     if (!category || !amount) return res.status(400).json({ error: 'Category and amount are required.' });
     const result = await run(
-      `INSERT INTO expenses (category, amount, description, month, year, date, paid_by, paid_to, receipt_no, payment_method, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [category, parseFloat(amount), description||'', parseInt(month), parseInt(year), date||null, paid_by||'', paid_to||'', receipt_no||'', payment_method||'Cash', req.user.id]
+      `INSERT INTO expenses (category, amount, description, month, year, date, paid_by, paid_to, receipt_no, payment_method, commodity_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [category, parseFloat(amount), description||'', parseInt(month), parseInt(year), date||null,
+       paid_by||'', paid_to||'', receipt_no||'', payment_method||'Cash',
+       commodity_id ? parseInt(commodity_id) : null, req.user.id]
     );
     res.status(201).json({ id: result.lastInsertRowid, message: 'Expense recorded.' });
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Server error.' }); }
+  } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
+});
+
+router.get('/expenses/search', authMiddleware, async (req, res) => {
+  try {
+    const q = `%${req.query.q || ''}%`;
+    const results = await all(
+      `SELECT * FROM expenses WHERE category LIKE ? OR paid_by LIKE ? OR paid_to LIKE ? OR description LIKE ? OR receipt_no LIKE ? ORDER BY date DESC, created_at DESC LIMIT 100`,
+      [q, q, q, q, q]
+    );
+    res.json({ results });
+  } catch (err) { res.status(500).json({ error: 'Server error.' }); }
 });
 
 router.delete('/expenses/:id', authMiddleware, async (req, res) => {
