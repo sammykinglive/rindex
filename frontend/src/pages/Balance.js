@@ -95,6 +95,19 @@ export default function Balance() {
   const unitPrice = parseFloat(activeCom?.unit_price || settings.unit_price || 0);
   const stockVal  = balance * unitPrice;
 
+  // Header info for the PDF export. For "All Commodities" the stock value is
+  // each commodity's balance at its own price, added up.
+  const pdfStockValue = selected === 'all'
+    ? commSummary.reduce((s, c) => s + c.balance * (parseFloat(c.unit_price) || 0), 0)
+    : stockVal;
+  const pdfMeta = {
+    total_in: totalIn, total_out: totalOut, balance,
+    commodity: selected === 'all' ? 'All Commodities' : activeCom?.name,
+    unit: selected === 'all' ? '' : unitLabel,
+    period: (range.from || range.to) ? range.label : 'All Time',
+    stock_value: pdfStockValue,
+  };
+
   return (
     <div>
       {/* ── Header ──────────────────────────────────────────────────────── */}
@@ -107,7 +120,7 @@ export default function Balance() {
           <button className="btn btn-ghost btn-sm" onClick={() => exportBalanceToExcel(displayLedger)}>
             <Download size={14}/> Excel
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={() => exportBalancePDF(displayLedger, { total_in:totalIn, total_out:totalOut, balance })}>
+          <button className="btn btn-ghost btn-sm" onClick={() => exportBalancePDF(displayLedger, pdfMeta)}>
             <Download size={14}/> PDF
           </button>
         </div>

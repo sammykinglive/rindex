@@ -7,15 +7,17 @@ const MUTED     = [107, 114, 128];
 const LIGHT_BG  = [246, 247, 251];
 
 function addHeader(doc, title, subtitle) {
+  const W = doc.internal.pageSize.getWidth(); // 210 portrait, 297 landscape
+
   // Header bar
   doc.setFillColor(...PRIMARY);
-  doc.rect(0, 0, 210, 22, 'F');
+  doc.rect(0, 0, W, 22, 'F');
 
-  // Logo text
+  // Logo text (jsPDF's built-in fonts can't draw emoji, so plain text only)
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('🌽 RINDEX', 12, 13);
+  doc.text('RINDEX', 12, 13);
 
   // Title
   doc.setFontSize(10);
@@ -24,12 +26,12 @@ function addHeader(doc, title, subtitle) {
 
   // Date
   const dateStr = new Date().toLocaleDateString('en-GH', { day: '2-digit', month: 'short', year: 'numeric' });
-  doc.text(dateStr, 198, 13, { align: 'right' });
+  doc.text(dateStr, W - 12, 13, { align: 'right' });
 
   // Subtitle
   if (subtitle) {
     doc.setFillColor(...LIGHT_BG);
-    doc.rect(0, 22, 210, 10, 'F');
+    doc.rect(0, 22, W, 10, 'F');
     doc.setTextColor(...MUTED);
     doc.setFontSize(9);
     doc.text(subtitle, 12, 28);
@@ -40,15 +42,17 @@ function addHeader(doc, title, subtitle) {
 
 function addFooter(doc) {
   const pageCount = doc.internal.getNumberOfPages();
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setDrawColor(...PRIMARY);
     doc.setLineWidth(0.5);
-    doc.line(10, 285, 200, 285);
+    doc.line(10, H - 12, W - 10, H - 12);
     doc.setTextColor(...MUTED);
     doc.setFontSize(8);
-    doc.text('Rindex — Maize Inventory Management System', 10, 290);
-    doc.text(`Page ${i} of ${pageCount}`, 200, 290, { align: 'right' });
+    doc.text('Rindex — Inventory Management System', 10, H - 7);
+    doc.text(`Page ${i} of ${pageCount}`, W - 10, H - 7, { align: 'right' });
   }
 }
 
@@ -208,15 +212,27 @@ export function exportIssuesPDF(issues, totals) {
 }
 
 // ── Export Balance PDF ────────────────────────────────────────────
-export function exportBalancePDF(ledger, kpis) {
+// kpis: { balance, commodity?, unit?, period?, stock_value? }
+//   commodity / unit  → set when one commodity is selected; leave unit empty for "All Commodities"
+//   period            → e.g. "September 2026" or "All Time"
+//   stock_value       → omitted from the header when missing (never prints NaN)
+export function exportBalancePDF(ledger, kpis = {}) {
   const doc = new jsPDF({ orientation: 'landscape' });
-  const y = addHeader(doc, 'STOCK BALANCE LEDGER',
-    `Balance: ${kpis.balance} bags · Value: GHS ${Number(kpis.stock_value).toLocaleString('en-GH', { minimumFractionDigits: 2 })}`
-  );
+
+  const parts = [kpis.commodity || 'All Commodities'];
+  if (kpis.period) parts.push(`Period: ${kpis.period}`);
+  const bal = Number(kpis.balance || 0).toLocaleString();
+  parts.push(kpis.unit ? `Balance: ${bal} ${kpis.unit}` : `Net balance: ${bal}`);
+  if (kpis.stock_value != null && Number.isFinite(Number(kpis.stock_value))) {
+    parts.push(`Value: GHS ${Number(kpis.stock_value).toLocaleString('en-GH', { minimumFractionDigits: 2 })}`);
+  }
+  const y = addHeader(doc, 'STOCK BALANCE LEDGER', parts.join(' · '));
+
+  const unitCap = kpis.unit ? kpis.unit.charAt(0).toUpperCase() + kpis.unit.slice(1) : '';
 
   autoTable(doc, {
     startY: y,
-    head: [['#', 'Date', 'Type', 'Reference', 'Party', 'Bags In', 'Bags Out', 'Balance']],
+    head: [['#', 'Date', 'Type', 'Reference', 'Party', unitCap ? `${unitCap} In` : 'In', unitCap ? `${unitCap} Out` : 'Out', 'Balance']],
     body: ledger.map((r, i) => [
       i + 1, r.date,
       r.type, r.ref, r.party,
