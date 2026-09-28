@@ -12,17 +12,21 @@ function autoWidth(ws, data) {
 }
 
 // ── Export Receipts ───────────────────────────────────────────────
-export function exportReceiptsToExcel(receipts, totals) {
+// unitLabel: the filtered commodity's unit (e.g. 'bags', 'litres'), or '' for
+// "All Commodities" — each row then carries its own commodity and unit instead.
+export function exportReceiptsToExcel(receipts, totals, unitLabel = '') {
   const wb = XLSX.utils.book_new();
+  const qtyHeader = unitLabel ? `Qty (${unitLabel[0].toUpperCase()}${unitLabel.slice(1)})` : 'Qty';
 
-  const headers = ['Date', 'GRN Number', 'Supplier Name', 'Qty (Bags)', 'Unit Cost (GHS)', 'Total Cost (GHS)', 'Delivery Note', 'Condition', 'Remarks'];
+  const headers = ['Date', 'Commodity', 'GRN Number', 'Supplier Name', qtyHeader, 'Unit', 'Unit Cost (GHS)', 'Total Cost (GHS)', 'Delivery Note', 'Condition', 'Remarks'];
   const rows = receipts.map(r => [
-    r.date, r.grn_number, r.supplier_name,
-    r.quantity, r.unit_cost, r.total_cost,
+    r.date, r.commodity_name || '—', r.grn_number, r.supplier_name,
+    r.quantity, r.commodity_unit || unitLabel || '',
+    r.unit_cost, r.total_cost,
     r.delivery_note || '', r.condition, r.remarks || ''
   ]);
 
-  const totalsRow = ['TOTAL', '', '', totals.total_bags, '', totals.total_cost, '', '', ''];
+  const totalsRow = ['TOTAL', '', '', '', totals.total_bags, unitLabel || '(mixed units)', '', totals.total_cost, '', '', ''];
   const data = [headers, ...rows, [], totalsRow];
 
   const ws = XLSX.utils.aoa_to_sheet(data);
@@ -36,17 +40,20 @@ export function exportReceiptsToExcel(receipts, totals) {
 }
 
 // ── Export Issues ─────────────────────────────────────────────────
-export function exportIssuesToExcel(issues, totals) {
+// unitLabel: the filtered commodity's unit, or '' for "All Commodities".
+export function exportIssuesToExcel(issues, totals, unitLabel = '') {
   const wb = XLSX.utils.book_new();
+  const qtyHeader = unitLabel ? `Qty (${unitLabel[0].toUpperCase()}${unitLabel.slice(1)})` : 'Qty';
 
-  const headers = ['Date', 'Invoice No.', 'Customer Name', 'Qty (Bags)', 'Selling Price (GHS)', 'Total Sales (GHS)', 'Payment Method', 'Payment Status', 'Remarks'];
+  const headers = ['Date', 'Commodity', 'Invoice No.', 'Customer Name', qtyHeader, 'Unit', 'Selling Price (GHS)', 'Total Sales (GHS)', 'Payment Method', 'Payment Status', 'Remarks'];
   const rows = issues.map(r => [
-    r.date, r.invoice_number, r.customer_name,
-    r.quantity, r.selling_price, r.total_sales,
+    r.date, r.commodity_name || '—', r.invoice_number, r.customer_name,
+    r.quantity, r.commodity_unit || unitLabel || '',
+    r.selling_price, r.total_sales,
     r.payment_method, r.payment_status, r.remarks || ''
   ]);
 
-  const totalsRow = ['TOTAL', '', '', totals.total_bags, '', totals.total_sales, '', '', ''];
+  const totalsRow = ['TOTAL', '', '', '', totals.total_bags, unitLabel || '(mixed units)', '', totals.total_sales, '', '', ''];
   const data = [headers, ...rows, [], totalsRow];
 
   const ws = XLSX.utils.aoa_to_sheet(data);
@@ -57,15 +64,18 @@ export function exportIssuesToExcel(issues, totals) {
 }
 
 // ── Export Balance Ledger ─────────────────────────────────────────
+// Each ledger row already carries its own commodity_name and unit (Balance.js
+// attaches these), so this works the same for one commodity or all of them.
 export function exportBalanceToExcel(ledger) {
   const wb = XLSX.utils.book_new();
 
-  const headers = ['#', 'Date', 'Type', 'Reference', 'Party', 'Bags In', 'Bags Out', 'Balance', 'Remarks'];
+  const headers = ['#', 'Date', 'Commodity', 'Type', 'Reference', 'Party', 'In', 'Out', 'Unit', 'Balance', 'Remarks'];
   const rows = ledger.map((r, i) => [
-    i + 1, r.date, r.type, r.ref,
+    i + 1, r.date, r.commodity_name || '—', r.type, r.ref,
     r.party,
     r.type === 'Receipt' ? r.quantity : '',
     r.type === 'Issue'   ? r.quantity : '',
+    r.unit || '',
     r.running_balance,
     r.remarks || ''
   ]);

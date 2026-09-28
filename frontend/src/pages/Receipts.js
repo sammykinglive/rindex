@@ -207,7 +207,7 @@ export default function Receipts() {
           <div className="page-sub">Record every delivery into the warehouse</div>
         </div>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => exportReceiptsToExcel(receipts, totals)}>
+          <button className="btn btn-ghost btn-sm" onClick={() => exportReceiptsToExcel(receipts, totals, filterCommodity ? unitLabel : '')}>
             <Download size={14}/> Excel
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => exportReceiptsPDF(receipts, totals)}>

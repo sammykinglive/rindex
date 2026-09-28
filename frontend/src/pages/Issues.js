@@ -220,7 +220,7 @@ export default function Issues() {
           <div className="page-sub">Record every sale or dispatch from the warehouse</div>
         </div>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => exportIssuesToExcel(issues, totals)}>
+          <button className="btn btn-ghost btn-sm" onClick={() => exportIssuesToExcel(issues, totals, filterCommodity ? unitLabel : '')}>
             <Download size={14}/> Excel
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => exportIssuesPDF(issues, totals)}>
