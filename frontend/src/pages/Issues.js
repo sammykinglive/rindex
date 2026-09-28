@@ -5,6 +5,7 @@ import { fmt } from '../utils/format';
 import toast from 'react-hot-toast';
 import { exportIssuesToExcel } from '../utils/exportExcel';
 import { exportIssuesPDF, printInvoice } from '../utils/exportPDF';
+import DateFilter, { useDateFilter } from '../components/DateFilter';
 
 const EMPTY = {
   commodity_id: '',
@@ -132,8 +133,7 @@ export default function Issues() {
   const [editId, setEditId]         = useState(null);
   const [search, setSearch]         = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [dateFrom, setDateFrom]     = useState('');
-  const [dateTo, setDateTo]         = useState('');
+  const { filter: dateFilter, setFilter: setDateFilter, range, reset: resetDates, isActive: dateActive } = useDateFilter();
 
   // Load active commodities once
   useEffect(() => {
@@ -147,8 +147,8 @@ export default function Issues() {
     const params = {};
     if (search)          params.customer    = search;
     if (statusFilter)    params.status      = statusFilter;
-    if (dateFrom)        params.from        = dateFrom;
-    if (dateTo)          params.to          = dateTo;
+    if (range.from)      params.from        = range.from;
+    if (range.to)        params.to          = range.to;
     if (filterCommodity) params.commodity_id = filterCommodity;
     Promise.all([
       api.get('/issues', { params }),
@@ -159,7 +159,7 @@ export default function Issues() {
       setSettings(setRes.data);
       setLoading(false);
     });
-  }, [search, statusFilter, dateFrom, dateTo, filterCommodity]);
+  }, [search, statusFilter, range.from, range.to, filterCommodity]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -264,13 +264,10 @@ export default function Issues() {
               <option value="">All Statuses</option>
               {['Paid','Pending','Partial'].map(s => <option key={s}>{s}</option>)}
             </select>
-            <input className="form-control" type="date" value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)} style={{ width:140 }}/>
-            <input className="form-control" type="date" value={dateTo}
-              onChange={e => setDateTo(e.target.value)} style={{ width:140 }}/>
-            {(search || statusFilter || dateFrom || dateTo || filterCommodity) && (
+            <DateFilter value={dateFilter} onChange={setDateFilter}/>
+            {(search || statusFilter || dateActive || filterCommodity) && (
               <button className="btn btn-ghost btn-sm"
-                onClick={() => { setSearch(''); setStatusFilter(''); setDateFrom(''); setDateTo(''); setFilterCommodity(''); }}>
+                onClick={() => { setSearch(''); setStatusFilter(''); resetDates(); setFilterCommodity(''); }}>
                 <X size={14}/> Clear
               </button>
             )}
