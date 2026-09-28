@@ -5,6 +5,7 @@ import { fmt } from '../utils/format';
 import toast from 'react-hot-toast';
 import { exportReceiptsToExcel } from '../utils/exportExcel';
 import { exportReceiptsPDF } from '../utils/exportPDF';
+import DateFilter, { useDateFilter } from '../components/DateFilter';
 
 const EMPTY = {
   commodity_id: '',
@@ -128,8 +129,7 @@ export default function Receipts() {
   const [form, setForm]             = useState(EMPTY);
   const [editId, setEditId]         = useState(null);
   const [search, setSearch]         = useState('');
-  const [dateFrom, setDateFrom]     = useState('');
-  const [dateTo, setDateTo]         = useState('');
+  const { filter: dateFilter, setFilter: setDateFilter, range, reset: resetDates, isActive: dateActive } = useDateFilter();
 
   // Load active commodities once
   useEffect(() => {
@@ -142,15 +142,15 @@ export default function Receipts() {
     setLoading(true);
     const params = {};
     if (search)          params.supplier     = search;
-    if (dateFrom)        params.from         = dateFrom;
-    if (dateTo)          params.to           = dateTo;
+    if (range.from)      params.from         = range.from;
+    if (range.to)        params.to           = range.to;
     if (filterCommodity) params.commodity_id = filterCommodity;
     api.get('/receipts', { params }).then(r => {
       setReceipts(r.data.receipts);
       setTotals(r.data.totals);
       setLoading(false);
     });
-  }, [search, dateFrom, dateTo, filterCommodity]);
+  }, [search, range.from, range.to, filterCommodity]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -247,13 +247,10 @@ export default function Receipts() {
               <input className="form-control" style={{ paddingLeft:30 }} placeholder="Search supplier…"
                 value={search} onChange={e => setSearch(e.target.value)}/>
             </div>
-            <input className="form-control" type="date" value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)} style={{ width:140 }}/>
-            <input className="form-control" type="date" value={dateTo}
-              onChange={e => setDateTo(e.target.value)} style={{ width:140 }}/>
-            {(search || dateFrom || dateTo || filterCommodity) && (
+            <DateFilter value={dateFilter} onChange={setDateFilter}/>
+            {(search || dateActive || filterCommodity) && (
               <button className="btn btn-ghost btn-sm"
-                onClick={() => { setSearch(''); setDateFrom(''); setDateTo(''); setFilterCommodity(''); }}>
+                onClick={() => { setSearch(''); resetDates(); setFilterCommodity(''); }}>
                 <X size={14}/> Clear
               </button>
             )}
