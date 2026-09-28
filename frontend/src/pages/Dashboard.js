@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { RefreshCw, AlertTriangle, Package, TrendingUp, TrendingDown } from 'lucide-react';
 import api from '../utils/api';
 import { fmt } from '../utils/format';
+import DateFilter, { useDateFilter } from '../components/DateFilter';
+import { toISODate } from '../utils/dateRange';
 
 // ── SVG icon helper ───────────────────────────────────────────────────────────
 const Icon = ({ path, color }) => (
@@ -15,6 +17,9 @@ const icons = {
   balance:   c => <Icon color={c} path={<><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></>}/>,
   value:     c => <Icon color={c} path={<><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></>}/>,
   revenue:   c => <Icon color={c} path={<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>}/>,
+  transactions: c => <Icon color={c} path={<><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></>}/>,
+  top:       c => <Icon color={c} path={<><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></>}/>,
+  customers: c => <Icon color={c} path={<><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>}/>,
   warehouse: c => <Icon color={c} path={<><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></>}/>,
 };
 
@@ -110,31 +115,44 @@ export default function Dashboard() {
   const [data, setData]         = useState(null);
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { filter: dateFilter, setFilter: setDateFilter, range, isActive: dateActive } = useDateFilter();
+  const reqRef = useRef(0);
 
-  function load(silent = false) {
-    if (!silent) setLoading(true); else setRefreshing(true);
-    api.get('/dashboard').then(r => { setData(r.data); setLoading(false); setRefreshing(false); });
-  }
-  useEffect(() => { load(); }, []);
+  // Reloads whenever the period changes. The page stays on screen while it
+  // refreshes, and a slow older response can never overwrite a newer one.
+  const load = useCallback(() => {
+    const id = ++reqRef.current;
+    setRefreshing(true);
+    const params = {};
+    if (range.from) params.from = range.from;
+    if (range.to)   params.to   = range.to;
+    api.get('/dashboard', { params })
+      .then(r => { if (id === reqRef.current) setData(r.data); })
+      .catch(() => {})
+      .finally(() => { if (id === reqRef.current) { setLoading(false); setRefreshing(false); } });
+  }, [range.from, range.to]);
+  useEffect(() => { load(); }, [load]);
 
-  if (loading) return (
+  if (loading || !data) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'60vh', flexDirection:'column', gap:16 }}>
       <div style={{ width:40, height:40, border:'3px solid var(--primary-pale)', borderTopColor:'var(--primary)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }}/>
       <span style={{ color:'var(--text-muted)', fontSize:14 }}>Loading dashboard…</span>
     </div>
   );
 
-  const { kpis, commodity_kpis = [], monthly, recent_activity, settings } = data;
+  const { kpis, commodity_kpis = [], series = [], recent_activity, settings } = data;
   const now  = new Date();
   const hour = now.getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
   const grossProfit = kpis.total_revenue - kpis.total_cogs;
-  const grossMargin = kpis.total_revenue > 0 ? (grossProfit / kpis.total_revenue * 100) : 0;
 
-  const barData  = monthly.map((m,i) => ({ name:MONTHS_SHORT[i], 'In':m.bags_in, 'Out':m.bags_out }));
-  const areaData = monthly.map((m,i) => ({ name:MONTHS_SHORT[i], Revenue:parseFloat((m.revenue||0).toFixed(2)) }));
+  const barData  = series.map(m => ({ name:m.label, 'In':m.bags_in, 'Out':m.bags_out }));
+  const areaData = series.map(m => ({ name:m.label, Revenue:parseFloat((m.revenue||0).toFixed(2)) }));
+
+  // Does the selected period run up to today? (past periods shouldn't say "restock now")
+  const isCurrent = !range.to || range.to >= toISODate(new Date());
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
   // Reorder alerts per commodity
   const lowStockComms = commodity_kpis.filter(c => c.reorder_alert);
@@ -147,16 +165,22 @@ export default function Dashboard() {
           <div className="page-title">{greeting}</div>
           <div className="page-sub">{now.toLocaleDateString('en-GH', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}</div>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => load(true)}>
-          <RefreshCw size={14} className={refreshing ? 'spin' : ''}/> Refresh
-        </button>
+        <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+          <DateFilter value={dateFilter} onChange={setDateFilter}/>
+          <button className="btn btn-ghost btn-sm" onClick={() => load()}>
+            <RefreshCw size={14} className={refreshing ? 'spin' : ''}/> Refresh
+          </button>
+        </div>
       </div>
 
+      {/* Content dims slightly while a new period loads */}
+      <div style={{ opacity: refreshing ? 0.55 : 1, transition:'opacity 0.15s' }}>
+
       {/* ── Reorder alerts ────────────────────────────────────────────── */}
-      {lowStockComms.length > 0 && (
+      {lowStockComms.length > 0 && isCurrent && (
         <div className="alert alert-danger" style={{ marginBottom:16, flexDirection:'column', alignItems:'flex-start', gap:6 }}>
           <div style={{ display:'flex', alignItems:'center', gap:8, fontWeight:700 }}>
-            <AlertTriangle size={16}/> Low Stock Alert — {lowStockComms.length} commodity{lowStockComms.length>1?'ies':''} need restocking
+            <AlertTriangle size={16}/> Low Stock Alert — {lowStockComms.length} commodit{lowStockComms.length>1?'ies':'y'} need restocking
           </div>
           <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
             {lowStockComms.map(c => (
@@ -171,12 +195,12 @@ export default function Dashboard() {
       {/* ── Overall KPI cards ─────────────────────────────────────────── */}
       <div className="kpi-grid">
         {[
-          { label:'Total Received', value:`${fmt.number(kpis.total_in)} units`,   sub:'All commodities',        iconKey:'received',  iconColor:'#02A793', onClick:()=>navigate('/receipts') },
-          { label:'Total Issued',   value:`${fmt.number(kpis.total_out)} units`,  sub:'All commodities',        iconKey:'issued',    iconColor:'#EF4444', onClick:()=>navigate('/issues') },
-          { label:'Net Balance',    value:`${fmt.number(kpis.balance)} units`,    sub:lowStockComms.length>0?`${lowStockComms.length} low stock`:'All healthy', iconKey:'balance', iconColor: lowStockComms.length>0?'#EF4444':'#10B981', valueColor:lowStockComms.length>0?'var(--red)':'var(--text)', onClick:()=>navigate('/balance') },
-          { label:'Stock Value',    value:fmt.currency(kpis.stock_value),         sub:'At current prices',      iconKey:'value',     iconColor:'#F59E0B' },
-          { label:'Total Revenue',  value:fmt.currency(kpis.total_revenue),       sub:`Margin: ${fmt.percent(grossMargin)}`, iconKey:'revenue', iconColor:'#8B5CF6', onClick:()=>navigate('/pnl') },
-          { label:'Gross Profit',   value:fmt.currency(grossProfit),              sub:grossProfit>=0?'Profitable':'Loss',    iconKey:'revenue', iconColor: grossProfit>=0?'#10B981':'#EF4444', valueColor: grossProfit>=0?'var(--green)':'var(--red)' },
+          { label:'Total Received', value:`${fmt.number(kpis.total_in)} units`,   sub: dateActive ? range.label : 'All commodities', iconKey:'received',  iconColor:'#02A793', onClick:()=>navigate('/receipts') },
+          { label:'Total Issued',   value:`${fmt.number(kpis.total_out)} units`,  sub: dateActive ? range.label : 'All commodities', iconKey:'issued',    iconColor:'#EF4444', onClick:()=>navigate('/issues') },
+          { label:'Net Balance',    value:`${fmt.number(kpis.balance)} units`,    sub:lowStockComms.length>0?`${lowStockComms.length} low stock`:'All healthy', sub2: range.from ? `Opening: ${fmt.number(kpis.opening_balance)} units` : undefined, iconKey:'balance', iconColor: lowStockComms.length>0?'#EF4444':'#10B981', valueColor:lowStockComms.length>0?'var(--red)':'var(--text)', onClick:()=>navigate('/balance') },
+          { label:'Transactions',   value:fmt.number(kpis.receipt_count + kpis.issue_count), sub:`${plural(kpis.receipt_count,'receipt')}, ${plural(kpis.issue_count,'issue')}`, iconKey:'transactions', iconColor:'#3B82F6', onClick:()=>navigate('/balance') },
+          { label:'Top Commodity',  value: kpis.top_commodity ? kpis.top_commodity.name : '—', sub: kpis.top_commodity ? `${plural(kpis.top_commodity.issues,'stock issue')}` : (dateActive ? 'No issues in this period' : 'No issues yet'), iconKey:'top', iconColor:'#F59E0B', onClick:()=>navigate('/issues') },
+          { label:'Customers Served', value:fmt.number(kpis.customers_served), sub:`${plural(kpis.suppliers_delivered,'supplier')} delivered`, iconKey:'customers', iconColor:'#8B5CF6', onClick:()=>navigate('/issues') },
         ].map(card => <KpiCard key={card.label} {...card}/>)}
       </div>
 
@@ -186,7 +210,7 @@ export default function Dashboard() {
           <div className="card-header">
             <div>
               <div className="card-title">Commodity Breakdown</div>
-              <div className="card-sub">Current stock position per commodity</div>
+              <div className="card-sub">{dateActive ? `In/Out for ${range.label} — balance as at period end` : 'Current stock position per commodity'}</div>
             </div>
             <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/balance')}>View ledger</button>
           </div>
@@ -204,7 +228,7 @@ export default function Dashboard() {
       <div style={{ display:'grid', gridTemplateColumns:'1.4fr 1fr', gap:16, marginBottom:16 }} className="chart-grid">
         <div className="card">
           <div className="card-header">
-            <div><div className="card-title">Stock Movement</div><div className="card-sub">{now.getFullYear()} — All commodities</div></div>
+            <div><div className="card-title">Stock Movement</div><div className="card-sub">{dateActive ? range.label : now.getFullYear()} — All commodities</div></div>
             <div style={{ display:'flex', gap:12 }}>
               {[['var(--primary)','In'],['var(--red)','Out']].map(([color,lbl]) => (
                 <span key={lbl} style={{ display:'flex', alignItems:'center', gap:4, fontSize:12, color:'var(--text-muted)' }}>
@@ -269,15 +293,24 @@ export default function Dashboard() {
       {/* ── Recent Activity ───────────────────────────────────────────── */}
       <div className="card">
         <div className="card-header">
-          <div><div className="card-title">Recent Activity</div><div className="card-sub">Latest movements</div></div>
+          <div><div className="card-title">Recent Activity</div><div className="card-sub">{dateActive ? `Latest movements — ${range.label}` : 'Latest movements'}</div></div>
           <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/balance')}>View all</button>
         </div>
         <div className="table-wrap">
           {recent_activity.length === 0 ? (
             <div className="empty-state">
               <Package size={36} style={{ opacity:0.25, marginBottom:10 }}/>
-              <h3>No transactions yet</h3>
-              <p>Record your first delivery to get started.</p>
+              {dateActive ? (
+                <>
+                  <h3>No transactions in this period</h3>
+                  <p>Try a different date range, or choose All Time.</p>
+                </>
+              ) : (
+                <>
+                  <h3>No transactions yet</h3>
+                  <p>Record your first delivery to get started.</p>
+                </>
+              )}
             </div>
           ) : (
             <table>
@@ -299,6 +332,8 @@ export default function Dashboard() {
             </table>
           )}
         </div>
+      </div>
+
       </div>
 
       <style>{`
