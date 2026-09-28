@@ -4,6 +4,8 @@ import api from '../utils/api';
 import { fmt } from '../utils/format';
 import { exportBalanceToExcel } from '../utils/exportExcel';
 import { exportBalancePDF } from '../utils/exportPDF';
+import DateFilter, { useDateFilter } from '../components/DateFilter';
+import { toISODate } from '../utils/dateRange';
 
 export default function Balance() {
   const [commodities, setCommodities] = useState([]);
@@ -12,6 +14,7 @@ export default function Balance() {
   const [issues, setIssues]           = useState([]);
   const [settings, setSettings]       = useState({});
   const [loading, setLoading]         = useState(true);
+  const { filter: dateFilter, setFilter: setDateFilter, range } = useDateFilter();
 
   // Load commodities once
   useEffect(() => {
@@ -38,15 +41,27 @@ export default function Balance() {
 
   useEffect(() => { load(); }, [load]);
 
+  // ── Date period ────────────────────────────────────────────────────────────
+  // Stock before the period starts is carried forward as the opening balance,
+  // movements inside the period are shown, and anything after it is left out.
+  // closing balance = opening + received − issued  (i.e. stock "as at" the period end)
+  const inPeriod     = d => (!range.from || d >= range.from) && (!range.to || d <= range.to);
+  const beforePeriod = d => !!range.from && d < range.from;
+  const sumQty       = rows => rows.reduce((s, x) => s + x.quantity, 0);
+  const isCurrent    = !range.to || range.to >= toISODate(new Date()); // period reaches today
+
   // ── Compute per-commodity summary cards ────────────────────────────────────
   const commSummary = commodities.map(c => {
-    const cIn  = receipts.filter(r => r.commodity_id === c.id).reduce((s, r) => s + r.quantity, 0);
-    const cOut = issues.filter(i => i.commodity_id === c.id).reduce((s, i) => s + i.quantity, 0);
-    const bal  = cIn - cOut;
-    const cap  = c.warehouse_capacity || 1000;
-    const pct  = cap > 0 ? (bal / cap) * 100 : 0;
-    return { ...c, total_in: cIn, total_out: cOut, balance: bal, capacity_used: pct };
-  }).filter(c => c.total_in > 0 || c.total_out > 0 || selected !== 'all');
+    const cRec  = receipts.filter(r => r.commodity_id === c.id);
+    const cIss  = issues.filter(i => i.commodity_id === c.id);
+    const cOpen = sumQty(cRec.filter(r => beforePeriod(r.date))) - sumQty(cIss.filter(i => beforePeriod(i.date)));
+    const cIn   = sumQty(cRec.filter(r => inPeriod(r.date)));
+    const cOut  = sumQty(cIss.filter(i => inPeriod(i.date)));
+    const bal   = cOpen + cIn - cOut;
+    const cap   = c.warehouse_capacity || 1000;
+    const pct   = cap > 0 ? (bal / cap) * 100 : 0;
+    return { ...c, opening: cOpen, total_in: cIn, total_out: cOut, balance: bal, capacity_used: pct };
+  }).filter(c => c.total_in > 0 || c.total_out > 0 || c.opening !== 0 || selected !== 'all');
 
   // ── Active filter commodity ────────────────────────────────────────────────
   const activeCom  = commodities.find(c => c.id === parseInt(selected));
@@ -56,19 +71,24 @@ export default function Balance() {
   const filtRec = selected === 'all' ? receipts : receipts.filter(r => r.commodity_id === parseInt(selected));
   const filtIss = selected === 'all' ? issues   : issues.filter(i => i.commodity_id   === parseInt(selected));
 
+  const periodRec  = filtRec.filter(r => inPeriod(r.date));
+  const periodIss  = filtIss.filter(i => inPeriod(i.date));
+  const openingBal = sumQty(filtRec.filter(r => beforePeriod(r.date))) - sumQty(filtIss.filter(i => beforePeriod(i.date)));
+  const showOpening = !!range.from;
+
   const ledger = [
-    ...filtRec.map(r => ({ ...r, type:'Receipt', party:r.supplier_name, ref:r.grn_number,     direction:+r.quantity, unit: r.commodity_unit || unitLabel })),
-    ...filtIss.map(i => ({ ...i, type:'Issue',   party:i.customer_name, ref:i.invoice_number, direction:-i.quantity, unit: i.commodity_unit || unitLabel })),
+    ...periodRec.map(r => ({ ...r, type:'Receipt', party:r.supplier_name, ref:r.grn_number,     direction:+r.quantity, unit: r.commodity_unit || unitLabel })),
+    ...periodIss.map(i => ({ ...i, type:'Issue',   party:i.customer_name, ref:i.invoice_number, direction:-i.quantity, unit: i.commodity_unit || unitLabel })),
   ].sort((a,b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.id - b.id);
 
-  let running = 0;
+  let running = openingBal;
   const ledgerWithBal = ledger.map(row => { running += row.direction; return { ...row, running_balance: running }; });
   const displayLedger = [...ledgerWithBal].reverse();
 
   // ── Totals ─────────────────────────────────────────────────────────────────
-  const totalIn  = filtRec.reduce((s,r) => s+r.quantity, 0);
-  const totalOut = filtIss.reduce((s,i) => s+i.quantity, 0);
-  const balance  = totalIn - totalOut;
+  const totalIn  = sumQty(periodRec);
+  const totalOut = sumQty(periodIss);
+  const balance  = openingBal + totalIn - totalOut; // closing balance
   const reorder  = parseInt(activeCom?.reorder_level || settings.reorder_level || 50);
   const cap      = parseInt(activeCom?.warehouse_capacity || settings.warehouse_capacity || 1000);
   const capPct   = cap > 0 ? (balance/cap)*100 : 0;
@@ -110,6 +130,11 @@ export default function Balance() {
             {c.name}
           </button>
         ))}
+      </div>
+
+      {/* ── Date filter ──────────────────────────────────────────────────── */}
+      <div style={{ marginBottom:20 }}>
+        <DateFilter value={dateFilter} onChange={setDateFilter}/>
       </div>
 
       {loading ? (
@@ -174,12 +199,13 @@ export default function Balance() {
             <>
               <div className="kpi-grid" style={{ marginBottom:16 }}>
                 {[
+                  ...(showOpening ? [{ label:'Opening Balance', value:`${fmt.number(openingBal)} ${unitLabel}`, icon:Package, color:'var(--blue)' }] : []),
                   { label:'Total Received', value:`${fmt.number(totalIn)} ${unitLabel}`,  icon:TrendingUp,    color:'var(--primary)' },
                   { label:'Total Issued',   value:`${fmt.number(totalOut)} ${unitLabel}`, icon:TrendingDown,  color:'var(--red)'     },
                   { label:'Balance',        value:`${fmt.number(balance)} ${unitLabel}`,  icon:Scale,         color:'var(--green)'   },
                   { label:'Stock Value',    value:fmt.currency(stockVal),                 icon:TrendingUp,    color:'var(--gold)'    },
                   { label:'Capacity Used',  value:fmt.percent(capPct),                    icon:AlertTriangle, color:'var(--orange)'  },
-                  { label:'Reorder Status', value:balance <= reorder ? 'REORDER NOW' : 'OK', icon:AlertTriangle, color: balance <= reorder ? 'var(--red)' : 'var(--green)' },
+                  { label:'Reorder Status', value:balance <= reorder ? (isCurrent ? 'REORDER NOW' : 'BELOW REORDER') : 'OK', icon:AlertTriangle, color: balance <= reorder ? 'var(--red)' : 'var(--green)' },
                 ].map(({ label, value, icon:Icon, color }) => (
                   <div className="kpi-card" key={label}>
                     <div style={{ display:'flex', alignItems:'center', gap:9 }}>
@@ -211,7 +237,7 @@ export default function Balance() {
                 </div>
               </div>
 
-              {balance <= reorder && (
+              {balance <= reorder && isCurrent && (
                 <div className="alert alert-danger" style={{ marginBottom:16 }}>
                   <AlertTriangle size={16}/> {activeCom?.name} stock is below reorder level ({reorder} {unitLabel}) — reorder immediately.
                 </div>
@@ -244,15 +270,24 @@ export default function Balance() {
                 {selected === 'all' ? 'Full Transaction Ledger' : `${activeCom?.name} Ledger`}
               </span>
               <span style={{ fontSize:12.5, color:'var(--text-muted)' }}>
-                {ledger.length} transaction{ledger.length !== 1 ? 's' : ''}
+                {ledger.length} transaction{ledger.length !== 1 ? 's' : ''}{(range.from || range.to) ? ` — ${range.label}` : ''}
               </span>
             </div>
             <div className="table-wrap">
               {displayLedger.length === 0 ? (
                 <div className="empty-state">
                   <Package size={36} style={{ opacity:0.25, marginBottom:10 }}/>
-                  <h3>No transactions yet</h3>
-                  <p>Start by recording a delivery in Stock Receipts.</p>
+                  {(range.from || range.to) ? (
+                    <>
+                      <h3>No transactions in this period</h3>
+                      <p>Try a different date range, or choose All Time.</p>
+                    </>
+                  ) : (
+                    <>
+                      <h3>No transactions yet</h3>
+                      <p>Start by recording a delivery in Stock Receipts.</p>
+                    </>
+                  )}
                 </div>
               ) : (
                 <table>
@@ -290,6 +325,19 @@ export default function Balance() {
                         <td style={{ color:'var(--text-muted)', fontSize:12 }}>{row.remarks || '—'}</td>
                       </tr>
                     ))}
+                    {showOpening && (
+                      <tr style={{ background:'var(--bg)' }}>
+                        <td colSpan={8} style={{ color:'var(--text-muted)', fontSize:12.5, fontStyle:'italic' }}>
+                          Opening balance — stock brought forward before {fmt.date(range.from)}
+                        </td>
+                        <td>
+                          <span style={{ fontWeight:800, color:'var(--primary)' }}>
+                            {fmt.number(openingBal)}{selected !== 'all' ? ` ${unitLabel}` : ''}
+                          </span>
+                        </td>
+                        <td></td>
+                      </tr>
+                    )}
                   </tbody>
                   <tfoot>
                     <tr className="tfoot-row">
