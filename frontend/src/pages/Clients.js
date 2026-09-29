@@ -52,21 +52,13 @@ function ChartTip({ active, payload, label }) {
 // ── KPI Card — icon top, clean vertical stack ─────────────────────────────────
 function KpiCard({ icon: Icon, label, value, sub, color }) {
   return (
-    <div style={{
-      background:'var(--card)', border:'1px solid var(--border)',
-      borderRadius:'var(--radius)', padding:'18px 20px',
-      boxShadow:'var(--shadow)', display:'flex', flexDirection:'column', gap:8,
-      transition:'box-shadow 0.2s, transform 0.2s',
-    }}
-      onMouseEnter={e=>{ e.currentTarget.style.boxShadow='var(--shadow-hover)'; e.currentTarget.style.transform='translateY(-2px)'; }}
-      onMouseLeave={e=>{ e.currentTarget.style.boxShadow='var(--shadow)'; e.currentTarget.style.transform='none'; }}
-    >
-      <div style={{ width:38, height:38, borderRadius:10, background:color+'18', display:'flex', alignItems:'center', justifyContent:'center' }}>
+    <div className="client-kpi-card">
+      <div className="client-kpi-icon" style={{ background:color+'18' }}>
         <Icon size={18} color={color} strokeWidth={2}/>
       </div>
-      <div style={{ fontSize:10.5, fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.6px', lineHeight:1.3 }}>{label}</div>
-      <div style={{ fontSize:20, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px', lineHeight:1, wordBreak:'break-word' }}>{value}</div>
-      {sub && <div style={{ fontSize:11.5, color:'var(--text-muted)', lineHeight:1.4 }}>{sub}</div>}
+      <div className="client-kpi-label">{label}</div>
+      <div className="client-kpi-value">{value}</div>
+      {sub && <div className="client-kpi-sub">{sub}</div>}
     </div>
   );
 }
@@ -782,13 +774,16 @@ export default function Clients() {
 
       {/* ── KPI Cards ─────────────────────────────────────────────────── */}
       {kpis && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(155px,1fr))', gap:12, marginBottom:24 }}>
+        <div className="client-kpi-grid">
+          {/* Client base */}
           <KpiCard icon={Users}       label="Total Clients"    value={fmt.number(kpis.total_clients)}        color="var(--primary)"  sub={`${kpis.active_clients} active`}/>
           <KpiCard icon={Plus}        label="New This Month"   value={kpis.new_this_month}                   color="var(--green)"    sub="added recently"/>
-          <KpiCard icon={DollarSign}  label="Total Revenue"    value={fmt.currency(kpis.total_revenue)}      color="var(--purple)"   sub="all time"/>
-          <KpiCard icon={Package}     label="Bags Sold"        value={`${fmt.number(kpis.total_bags)} bags`} color="var(--blue)"     sub="all clients"/>
-          <KpiCard icon={ShoppingCart} label="Avg Order Value" value={fmt.currency(kpis.avg_order_value)}    color="var(--orange)"   sub="per transaction"/>
           <KpiCard icon={RefreshCw}   label="Returning Rate"   value={fmt.percent(kpis.returning_rate)}      color="var(--gold)"     sub="placed 2+ orders"/>
+          {/* Sales performance */}
+          <KpiCard icon={DollarSign}  label="Total Revenue"    value={fmt.currency(kpis.total_revenue)}      color="var(--purple)"   sub="all time"/>
+          <KpiCard icon={ShoppingCart} label="Avg Order Value" value={fmt.currency(kpis.avg_order_value)}    color="var(--orange)"   sub="per transaction"/>
+          <KpiCard icon={Package}     label="Bags Sold"        value={`${fmt.number(kpis.total_bags)} bags`} color="var(--blue)"     sub="all clients"/>
+          {/* Leaders */}
           <KpiCard icon={Award}       label="Top Spender"      value={kpis.top_spender}                      color="var(--red)"      sub={fmt.currency(kpis.top_spender_rev)}/>
           <KpiCard icon={TrendingUp}  label="Top Volume"       value={kpis.top_volume}                       color="var(--primary)"  sub={`${fmt.number(kpis.top_volume_bags)} bags`}/>
         </div>
@@ -1147,6 +1142,26 @@ export default function Clients() {
           margin-right: 0 !important;
         }
 
+        /* ── Client KPI row: 4-col desktop → 2-col tablet & mobile ── */
+        .client-kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+          margin-bottom: 24px;
+        }
+        .client-kpi-card {
+          background: var(--card); border: 1px solid var(--border);
+          border-radius: var(--radius); padding: 18px 20px;
+          box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px;
+          min-width: 0; box-sizing: border-box;
+          transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .client-kpi-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+        .client-kpi-icon  { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .client-kpi-label { font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; line-height: 1.3; }
+        .client-kpi-value { font-size: 20px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; line-height: 1; word-break: break-word; }
+        .client-kpi-sub   { font-size: 11.5px; color: var(--text-muted); line-height: 1.4; overflow-wrap: break-word; }
+
         /* ── Overview cards: 3-col desktop → 1-col mobile ─────────── */
         .client-overview-grid {
           display: grid;
@@ -1261,8 +1276,19 @@ export default function Clients() {
         .btn:active        { transform: scale(0.96); }
         .btn-primary:hover { filter: brightness(1.07); }
 
+        /* ── Tablet ───────────────────────────────────────────────── */
+        @media (max-width: 1024px) {
+          .client-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
         /* ── Mobile overrides ─────────────────────────────────────── */
         @media (max-width: 640px) {
+          .client-kpi-grid      { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 18px; }
+          .client-kpi-card      { padding: 13px 14px; gap: 8px; }
+          .client-kpi-icon      { width: 32px; height: 32px; border-radius: 8px; }
+          .client-kpi-value     { font-size: 16px; }
+          .client-kpi-label     { font-size: 9.5px; }
+          .client-kpi-sub       { font-size: 10.5px; }
           .insights-top-grid    { grid-template-columns: 1fr; }
           .client-overview-grid { grid-template-columns: 1fr; }
           .client-charts-grid   { grid-template-columns: 1fr; }
