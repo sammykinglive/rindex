@@ -1,17 +1,34 @@
 const express = require('express');
 const { run, get, all } = require('../db/database');
 const { authMiddleware } = require('../middleware/auth');
+const { nextBatchNumber } = require('../utils/numbering');
 
 const router = express.Router();
 
 async function getCommodityMap() {
   try {
-    const rows = await all(`SELECT id, name, unit FROM commodities`);
+    const rows = await all(`SELECT id, name, unit, code FROM commodities`);
     const map = {};
     (rows || []).forEach(c => { map[c.id] = c; });
     return map;
   } catch (_) { return {}; }
 }
+
+// GET /api/issues/next-batch?date=YYYY-MM-DD&commodity_id=ID
+// Preview only, same caveat as receipts' /next-numbers — POST / always
+// recomputes its own batch number rather than trusting the client.
+router.get('/next-batch', authMiddleware, async (req, res) => {
+  try {
+    const { date, commodity_id } = req.query;
+    const commMap = await getCommodityMap();
+    const commodity = commodity_id ? commMap[parseInt(commodity_id)] : null;
+    const batch_number = await nextBatchNumber(commodity, date);
+    res.json({ batch_number });
+  } catch (err) {
+    console.error('GET /issues/next-batch error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
@@ -43,29 +60,35 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Batch number is always generated here, never taken from the request
+// body (same reasoning as receipts.js) — invoice_number is still typed
+// by the user, that one hasn't changed.
 router.post('/', authMiddleware, async (req, res) => {
   try {
     const { commodity_id, date, invoice_number, customer_name, quantity, selling_price, payment_method, payment_status, remarks } = req.body;
     if (!date || !invoice_number || !customer_name || !quantity || !selling_price)
       return res.status(400).json({ error: 'Date, invoice number, customer, quantity and selling price are required.' });
     const total_sales = parseFloat(quantity) * parseFloat(selling_price);
+    const commMap = await getCommodityMap();
+    const commodity = commodity_id ? commMap[parseInt(commodity_id)] : null;
+    const batch_number = await nextBatchNumber(commodity, date);
     const result = await run(
-      `INSERT INTO stock_issues (commodity_id, date, invoice_number, customer_name, quantity, selling_price, total_sales, payment_method, payment_status, remarks, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [commodity_id ? parseInt(commodity_id) : null, date, invoice_number, customer_name,
+      `INSERT INTO stock_issues (commodity_id, date, invoice_number, batch_number, customer_name, quantity, selling_price, total_sales, payment_method, payment_status, remarks, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [commodity_id ? parseInt(commodity_id) : null, date, invoice_number, batch_number, customer_name,
        parseInt(quantity), parseFloat(selling_price), total_sales,
        payment_method||'Cash', payment_status||'Paid', remarks||'', req.user.id]
     );
-    res.status(201).json({ id: result.lastInsertRowid, message: 'Issue recorded.' });
+    res.status(201).json({ id: result.lastInsertRowid, batch_number, message: 'Issue recorded.' });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    const { commodity_id, date, invoice_number, customer_name, quantity, selling_price, payment_method, payment_status, remarks } = req.body;
+    const { commodity_id, date, invoice_number, batch_number, customer_name, quantity, selling_price, payment_method, payment_status, remarks } = req.body;
     const total_sales = parseFloat(quantity) * parseFloat(selling_price);
     await run(
-      `UPDATE stock_issues SET commodity_id=?,date=?,invoice_number=?,customer_name=?,quantity=?,selling_price=?,total_sales=?,payment_method=?,payment_status=?,remarks=? WHERE id=?`,
-      [commodity_id ? parseInt(commodity_id) : null, date, invoice_number, customer_name,
+      `UPDATE stock_issues SET commodity_id=?,date=?,invoice_number=?,batch_number=?,customer_name=?,quantity=?,selling_price=?,total_sales=?,payment_method=?,payment_status=?,remarks=? WHERE id=?`,
+      [commodity_id ? parseInt(commodity_id) : null, date, invoice_number, batch_number||'', customer_name,
        parseInt(quantity), parseFloat(selling_price), total_sales,
        payment_method, payment_status, remarks||'', req.params.id]
     );

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Search, X, Download, FileText, ShoppingCart } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Pencil, Trash2, Search, X, Download, FileText, ShoppingCart, Loader2 } from 'lucide-react';
 import api from '../utils/api';
 import { fmt } from '../utils/format';
 import toast from 'react-hot-toast';
@@ -10,17 +10,37 @@ import DateFilter, { useDateFilter } from '../components/DateFilter';
 const EMPTY = {
   commodity_id: '',
   date: new Date().toISOString().slice(0,10),
-  invoice_number: '', customer_name: '',
+  invoice_number: '', batch_number: '', customer_name: '',
   quantity: '', selling_price: '',
   payment_method: 'Cash', payment_status: 'Paid', remarks: '',
 };
 
 // ── Form Modal ────────────────────────────────────────────────────────────────
-function Modal({ title, onClose, onSubmit, form, setForm, loading, commodities, settings }) {
+function Modal({ title, onClose, onSubmit, form, setForm, loading, commodities, settings, editing }) {
   const commodity = commodities.find(c => c.id === parseInt(form.commodity_id));
   const unit      = commodity?.unit || 'units';
   const price     = parseFloat(form.selling_price) || 0;
   const total     = (parseFloat(form.quantity)||0) * price;
+
+  // ── Auto-generate the Batch No. for a NEW issue ───────────────────────────
+  // Same preview-only approach as Receipts — issues.js always recomputes its
+  // own batch number on save. Invoice Number is unaffected; that's still
+  // typed by the user.
+  const [genLoading, setGenLoading] = useState(false);
+  const genReqRef = useRef(0);
+  useEffect(() => {
+    if (editing || !form.date) return;
+    const id = ++genReqRef.current;
+    const t = setTimeout(() => {
+      setGenLoading(true);
+      api.get('/issues/next-batch', { params: { date: form.date, commodity_id: form.commodity_id || undefined } })
+        .then(r => { if (id === genReqRef.current) setForm(f => ({ ...f, batch_number: r.data.batch_number })); })
+        .catch(() => {})
+        .finally(() => { if (id === genReqRef.current) setGenLoading(false); });
+    }, 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, form.date, form.commodity_id]);
 
   function handleCommodityChange(id) {
     const c = commodities.find(c => c.id === parseInt(id));
@@ -63,6 +83,23 @@ function Modal({ title, onClose, onSubmit, form, setForm, loading, commodities, 
                 <label className="form-label">Invoice Number *</label>
                 <input className="form-control" value={form.invoice_number}
                   onChange={e => setForm({...form, invoice_number: e.target.value})} required/>
+              </div>
+              <div className="form-group" style={{ gridColumn:'1/-1' }}>
+                <label className="form-label">
+                  Batch No.
+                  {!editing && <span style={{ fontWeight:500, color:'var(--text-muted)', textTransform:'none', letterSpacing:0 }}> — auto-generated</span>}
+                </label>
+                {editing ? (
+                  <input className="form-control" value={form.batch_number}
+                    placeholder="e.g. B-MZ-290926-01 (optional)"
+                    onChange={e => setForm({...form, batch_number: e.target.value})}/>
+                ) : (
+                  <div className="form-control" style={{ display:'flex', alignItems:'center', gap:8, fontFamily:'monospace', fontWeight:700, background:'var(--surface-alt, var(--bg))', color:'var(--primary)', cursor:'default' }}>
+                    {genLoading
+                      ? <><Loader2 size={13} className="spin"/> Generating…</>
+                      : (form.batch_number || '—')}
+                  </div>
+                )}
               </div>
               <div className="form-group" style={{ gridColumn:'1/-1' }}>
                 <label className="form-label">Customer Name *</label>
@@ -196,6 +233,7 @@ export default function Issues() {
       commodity_id:   r.commodity_id || '',
       date:           r.date,
       invoice_number: r.invoice_number,
+      batch_number:   r.batch_number || '',
       customer_name:  r.customer_name,
       quantity:       r.quantity,
       selling_price:  r.selling_price,
@@ -292,7 +330,7 @@ export default function Issues() {
             <table>
               <thead>
                 <tr>
-                  <th>Date</th><th>Commodity</th><th>Invoice</th><th>Customer</th>
+                  <th>Date</th><th>Commodity</th><th>Invoice</th><th>Batch No.</th><th>Customer</th>
                   <th>Qty</th><th>Price</th><th>Total Sales</th>
                   <th>Payment</th><th>Status</th><th>Actions</th>
                 </tr>
@@ -310,6 +348,7 @@ export default function Issues() {
                         </div>
                       </td>
                       <td style={{ fontFamily:'monospace', fontWeight:600, fontSize:12 }}>{r.invoice_number}</td>
+                      <td style={{ fontFamily:'monospace', fontSize:12, color: r.batch_number ? 'var(--text)' : 'var(--text-muted)' }}>{r.batch_number || '—'}</td>
                       <td style={{ fontWeight:500 }}>{r.customer_name}</td>
                       <td style={{ fontWeight:700, color:'var(--red)' }}>
                         {fmt.number(r.quantity)} <span style={{ fontSize:11, color:'var(--text-muted)' }}>{r.commodity_unit || comm?.unit || ''}</span>
@@ -335,7 +374,7 @@ export default function Issues() {
               </tbody>
               <tfoot>
                 <tr className="tfoot-row">
-                  <td colSpan={4}>TOTAL{filterComm ? ` — ${filterComm.name}` : ' — All Commodities'}</td>
+                  <td colSpan={5}>TOTAL{filterComm ? ` — ${filterComm.name}` : ' — All Commodities'}</td>
                   <td>{fmt.number(issues.reduce((s,r)=>s+r.quantity,0))} {unitLabel}</td>
                   <td></td>
                   <td>{fmt.currency(issues.reduce((s,r)=>s+r.total_sales,0))}</td>
@@ -356,6 +395,7 @@ export default function Issues() {
           loading={saving}
           commodities={commodities}
           settings={settings}
+          editing={modal === 'edit'}
         />
       )}
     </div>

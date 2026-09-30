@@ -1,18 +1,42 @@
 const express = require('express');
 const { run, get, all } = require('../db/database');
 const { authMiddleware } = require('../middleware/auth');
+const { nextGrnNumber, nextBatchNumber } = require('../utils/numbering');
 
 const router = express.Router();
 
 // Safe commodity lookup — returns empty map if table missing
 async function getCommodityMap() {
   try {
-    const rows = await all(`SELECT id, name, unit FROM commodities`);
+    const rows = await all(`SELECT id, name, unit, code FROM commodities`);
     const map = {};
     (rows || []).forEach(c => { map[c.id] = c; });
     return map;
   } catch (_) { return {}; }
 }
+
+// GET /api/receipts/next-numbers?date=YYYY-MM-DD&commodity_id=ID
+// Preview only — what POST / would assign right now if a receipt were
+// created with this date/commodity. The create endpoint always recomputes
+// its own number rather than trusting whatever the client sends, so this
+// preview can never go stale in a way that breaks anything — worst case,
+// if two people load the form at the same moment, one preview is off by
+// one and gets corrected the instant that record is actually saved.
+router.get('/next-numbers', authMiddleware, async (req, res) => {
+  try {
+    const { date, commodity_id } = req.query;
+    const commMap = await getCommodityMap();
+    const commodity = commodity_id ? commMap[parseInt(commodity_id)] : null;
+    const [grn_number, batch_number] = await Promise.all([
+      nextGrnNumber(date),
+      nextBatchNumber(commodity, date),
+    ]);
+    res.json({ grn_number, batch_number });
+  } catch (err) {
+    console.error('GET /receipts/next-numbers error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
@@ -43,29 +67,39 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// GRN and batch numbers are always generated here, never taken from the
+// request body — this is what actually guarantees uniqueness even if two
+// receipts are submitted at nearly the same moment (the preview above can
+// only ever be a best-effort suggestion).
 router.post('/', authMiddleware, async (req, res) => {
   try {
-    const { commodity_id, date, grn_number, supplier_name, quantity, unit_cost, delivery_note, condition, remarks } = req.body;
-    if (!date || !grn_number || !supplier_name || !quantity || !unit_cost)
-      return res.status(400).json({ error: 'Date, GRN number, supplier, quantity and unit cost are required.' });
+    const { commodity_id, date, supplier_name, quantity, unit_cost, delivery_note, condition, remarks } = req.body;
+    if (!date || !supplier_name || !quantity || !unit_cost)
+      return res.status(400).json({ error: 'Date, supplier, quantity and unit cost are required.' });
     const total_cost = parseFloat(quantity) * parseFloat(unit_cost);
+    const commMap = await getCommodityMap();
+    const commodity = commodity_id ? commMap[parseInt(commodity_id)] : null;
+    const [grn_number, batch_number] = await Promise.all([
+      nextGrnNumber(date),
+      nextBatchNumber(commodity, date),
+    ]);
     const result = await run(
-      `INSERT INTO stock_receipts (commodity_id, date, grn_number, supplier_name, quantity, unit_cost, total_cost, delivery_note, condition, remarks, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [commodity_id ? parseInt(commodity_id) : null, date, grn_number, supplier_name,
+      `INSERT INTO stock_receipts (commodity_id, date, grn_number, batch_number, supplier_name, quantity, unit_cost, total_cost, delivery_note, condition, remarks, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [commodity_id ? parseInt(commodity_id) : null, date, grn_number, batch_number, supplier_name,
        parseInt(quantity), parseFloat(unit_cost), total_cost,
        delivery_note||'', condition||'Good', remarks||'', req.user.id]
     );
-    res.status(201).json({ id: result.lastInsertRowid, message: 'Receipt recorded.' });
+    res.status(201).json({ id: result.lastInsertRowid, grn_number, batch_number, message: 'Receipt recorded.' });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
-    const { commodity_id, date, grn_number, supplier_name, quantity, unit_cost, delivery_note, condition, remarks } = req.body;
+    const { commodity_id, date, grn_number, batch_number, supplier_name, quantity, unit_cost, delivery_note, condition, remarks } = req.body;
     const total_cost = parseFloat(quantity) * parseFloat(unit_cost);
     await run(
-      `UPDATE stock_receipts SET commodity_id=?,date=?,grn_number=?,supplier_name=?,quantity=?,unit_cost=?,total_cost=?,delivery_note=?,condition=?,remarks=? WHERE id=?`,
-      [commodity_id ? parseInt(commodity_id) : null, date, grn_number, supplier_name,
+      `UPDATE stock_receipts SET commodity_id=?,date=?,grn_number=?,batch_number=?,supplier_name=?,quantity=?,unit_cost=?,total_cost=?,delivery_note=?,condition=?,remarks=? WHERE id=?`,
+      [commodity_id ? parseInt(commodity_id) : null, date, grn_number, batch_number||'', supplier_name,
        parseInt(quantity), parseFloat(unit_cost), total_cost,
        delivery_note||'', condition||'Good', remarks||'', req.params.id]
     );

@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { codeForCommodity, ddmmyy, KNOWN_CODES } = require('../utils/numbering');
 
 const DB_URL = process.env.TURSO_DB_URL;
 const DB_TOKEN = process.env.TURSO_DB_TOKEN;
@@ -115,6 +116,7 @@ async function initDb() {
       commodity_id INTEGER REFERENCES commodities(id),
       date TEXT NOT NULL,
       grn_number TEXT NOT NULL,
+      batch_number TEXT,
       supplier_name TEXT NOT NULL,
       quantity INTEGER NOT NULL,
       unit_cost REAL NOT NULL,
@@ -130,6 +132,7 @@ async function initDb() {
       commodity_id INTEGER REFERENCES commodities(id),
       date TEXT NOT NULL,
       invoice_number TEXT NOT NULL,
+      batch_number TEXT,
       customer_name TEXT NOT NULL,
       quantity INTEGER NOT NULL,
       selling_price REAL NOT NULL,
@@ -201,6 +204,9 @@ async function initDb() {
     `ALTER TABLE expenses ADD COLUMN paid_to TEXT`,
     `ALTER TABLE expenses ADD COLUMN receipt_no TEXT`,
     `ALTER TABLE expenses ADD COLUMN payment_method TEXT`,
+    `ALTER TABLE stock_receipts ADD COLUMN batch_number TEXT`,
+    `ALTER TABLE stock_issues ADD COLUMN batch_number TEXT`,
+    `ALTER TABLE commodities ADD COLUMN code TEXT`,
   ];
   for (const sql of migrations) {
     try { await run(sql); } catch (_) { /* column already exists */ }
@@ -243,12 +249,63 @@ async function initDb() {
   const totalComm = await get(`SELECT COUNT(*) as n FROM commodities`);
   console.log(`✅ Commodities in DB: ${totalComm.n}`);
 
+  // ── Seed short codes for the default commodities (used in batch numbers,
+  // e.g. Maize -> MZ, giving batch tags like B-MZ-290926-01) ────────────────
+  // Only sets code where it's still blank, so a manually-edited code is
+  // never overwritten on a later restart.
+  for (const [name, code] of Object.entries(KNOWN_CODES)) {
+    await run(`UPDATE commodities SET code = ? WHERE name = ? AND (code IS NULL OR code = '')`, [code, name]);
+  }
+
   // ── Migrate existing maize transactions ──────────────────────────────────
   // Tag any untagged receipts/issues with the Maize commodity id
   const maize = await get(`SELECT id FROM commodities WHERE name = 'Maize'`);
   if (maize) {
     await run(`UPDATE stock_receipts SET commodity_id = ? WHERE commodity_id IS NULL`, [maize.id]);
     await run(`UPDATE stock_issues  SET commodity_id = ? WHERE commodity_id IS NULL`, [maize.id]);
+  }
+
+  // ── Backfill batch numbers for existing receipts/issues that don't have
+  // one (an old row, or one entered before batch numbers existed) ──────────
+  // Naturally runs once: once a row has a batch number it's never blank
+  // again, so this is a no-op on every later restart. Receipts and issues
+  // share one counter per commodity per day, so this has to process both
+  // tables together, in true chronological order (oldest first, receipts
+  // before issues on a tied date), so the numbers read exactly as if they'd
+  // been auto-generated when each row was first created.
+  try {
+    const commoditiesAll = await all(`SELECT id, name, code FROM commodities`);
+    const commMap = {};
+    commoditiesAll.forEach(c => { commMap[c.id] = c; });
+
+    const blankReceipts = await all(`SELECT id, commodity_id, date FROM stock_receipts WHERE batch_number IS NULL OR batch_number = ''`);
+    const blankIssues   = await all(`SELECT id, commodity_id, date FROM stock_issues   WHERE batch_number IS NULL OR batch_number = ''`);
+
+    if ((blankReceipts?.length || 0) + (blankIssues?.length || 0) > 0) {
+      const rows = [
+        ...(blankReceipts || []).map(r => ({ table: 'stock_receipts', id: r.id, commodity_id: r.commodity_id, date: r.date })),
+        ...(blankIssues   || []).map(r => ({ table: 'stock_issues',   id: r.id, commodity_id: r.commodity_id, date: r.date })),
+      ];
+      rows.sort((a, b) =>
+        (a.date || '').localeCompare(b.date || '') ||
+        (a.table === b.table ? 0 : (a.table === 'stock_receipts' ? -1 : 1)) ||
+        a.id - b.id
+      );
+
+      const seqCounters = {}; // `${commodity_id}|${DDMMYY}` -> last-used seq
+      for (const row of rows) {
+        const code  = codeForCommodity(commMap[row.commodity_id]);
+        const stamp = ddmmyy(row.date);
+        const key   = `${row.commodity_id}|${stamp}`;
+        const seq   = (seqCounters[key] || 0) + 1;
+        seqCounters[key] = seq;
+        const batchNumber = `B-${code}-${stamp}-${String(seq).padStart(2, '0')}`;
+        await run(`UPDATE ${row.table} SET batch_number = ? WHERE id = ?`, [batchNumber, row.id]);
+      }
+      console.log(`✅ Backfilled batch numbers for ${rows.length} existing record(s).`);
+    }
+  } catch (err) {
+    console.error('Batch number backfill failed:', err.message);
   }
 
   // ── Settings ─────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 const express = require('express');
 const { run, get, all } = require('../db/database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
+const { deriveCode } = require('../utils/numbering');
 
 const router = express.Router();
 
@@ -47,11 +48,12 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // ── Create commodity ──────────────────────────────────────────────────────────
 router.post('/', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { name, unit, unit_price, reorder_level, warehouse_capacity } = req.body;
+    const { name, unit, unit_price, reorder_level, warehouse_capacity, code } = req.body;
     if (!name || !unit) return res.status(400).json({ error: 'Name and unit are required.' });
     const result = await run(
-      `INSERT INTO commodities (name, unit, unit_price, reorder_level, warehouse_capacity) VALUES (?, ?, ?, ?, ?)`,
-      [name.trim(), unit, parseFloat(unit_price)||0, parseInt(reorder_level)||50, parseInt(warehouse_capacity)||1000]
+      `INSERT INTO commodities (name, unit, unit_price, reorder_level, warehouse_capacity, code) VALUES (?, ?, ?, ?, ?, ?)`,
+      [name.trim(), unit, parseFloat(unit_price)||0, parseInt(reorder_level)||50, parseInt(warehouse_capacity)||1000,
+       (code || deriveCode(name)).toUpperCase()]
     );
     res.status(201).json({ id: result.lastInsertRowid, name, unit });
   } catch (err) {
@@ -64,10 +66,13 @@ router.post('/', authMiddleware, adminOnly, async (req, res) => {
 // ── Update commodity ──────────────────────────────────────────────────────────
 router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
   try {
-    const { name, unit, unit_price, reorder_level, warehouse_capacity, is_active } = req.body;
+    const { name, unit, unit_price, reorder_level, warehouse_capacity, is_active, code } = req.body;
+    // COALESCE keeps the existing code when none is sent, so a PUT that
+    // doesn't mention code (every caller today) can never blank it out.
     await run(
-      `UPDATE commodities SET name=?, unit=?, unit_price=?, reorder_level=?, warehouse_capacity=?, is_active=? WHERE id=?`,
-      [name, unit, parseFloat(unit_price)||0, parseInt(reorder_level)||50, parseInt(warehouse_capacity)||1000, is_active ?? 1, req.params.id]
+      `UPDATE commodities SET name=?, unit=?, unit_price=?, reorder_level=?, warehouse_capacity=?, is_active=?, code=COALESCE(?, code) WHERE id=?`,
+      [name, unit, parseFloat(unit_price)||0, parseInt(reorder_level)||50, parseInt(warehouse_capacity)||1000, is_active ?? 1,
+       code ? code.toUpperCase() : null, req.params.id]
     );
     res.json({ message: 'Updated.' });
   } catch (err) {
