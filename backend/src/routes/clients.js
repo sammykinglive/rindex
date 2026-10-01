@@ -76,7 +76,7 @@ router.get('/', authMiddleware, async (req, res) => {
       LEFT JOIN stock_issues i ON LOWER(TRIM(i.customer_name)) = LOWER(TRIM(c.name))
       ${where}
       GROUP BY c.id
-      ORDER BY c.name ASC
+      ORDER BY total_orders DESC, c.name ASC
       LIMIT ? OFFSET ?
     `, [...params, parseInt(limit), offset]);
 

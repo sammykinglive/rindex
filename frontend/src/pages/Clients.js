@@ -16,12 +16,20 @@ import { fmt } from '../utils/format';
 import toast from 'react-hot-toast';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const CATEGORIES   = ['Corporate','Retail','Wholesale','Traditional Market'];
+const CATEGORIES   = [
+  'Corporate','Retail','Wholesale','Traditional Market',
+  'Poultry Farm','Pig Farm','Cattle Farm','Fish Farm','Hatchery',
+  'Feed Mill','Food Processors','Others',
+];
 const REGIONS_GH   = ['Greater Accra','Ashanti','Western','Eastern','Central','Volta','Northern','Upper East','Upper West','Brong-Ahafo','Oti','Savannah','North East','Western North','Ahafo','Bono East'];
 const PAYMENT_OPTS = ['Cash','Credit','Mobile Money','Bank Transfer','Cheque'];
 const NOTE_TYPES   = ['General','Meeting','Follow-up','Complaint','Preference','Pricing','Credit'];
 const STATUS_OPTS  = ['Active','Inactive'];
-const CAT_COLORS   = { Corporate:'#8B5CF6', Retail:'#02A793', Wholesale:'#3B82F6', 'Traditional Market':'#F97316' };
+const CAT_COLORS   = {
+  Corporate:'#8B5CF6', Retail:'#02A793', Wholesale:'#3B82F6', 'Traditional Market':'#F97316',
+  'Poultry Farm':'#EAB308', 'Pig Farm':'#EC4899', 'Cattle Farm':'#92400E', 'Fish Farm':'#06B6D4', 'Hatchery':'#84CC16',
+  'Feed Mill':'#6366F1', 'Food Processors':'#DC2626', 'Others':'#6B7280',
+};
 const PIE_COLORS   = ['#02A793','#8B5CF6','#3B82F6','#F97316','#10B981','#EF4444'];
 const EMPTY_CLIENT = {
   name:'', company_name:'', category:'Retail', contact_person:'',
@@ -1111,11 +1119,16 @@ export default function Clients() {
           gap: 16px;
         }
 
-        /* ── Expanded row: hard-clamp to viewport, never overflow ─── */
+        /* ── Expanded row: never overflow horizontally ─────────────
+           No 'overflow' here on purpose — any overflow value other than
+           visible on an ancestor breaks position:sticky for .client-tabs-bar
+           below (it starts sticking within this box instead of the page).
+           Horizontal safety instead comes from box-sizing/min-width on
+           every descendant (next rule) plus each wide element (the orders
+           table, the charts) owning its own overflow-x where it needs it. */
         .client-expanded-wrap {
           width: 100%;
           box-sizing: border-box;
-          overflow: hidden;
           border-radius: var(--radius);
           border: 1px solid var(--border);
           background: var(--bg);
@@ -1197,7 +1210,7 @@ export default function Clients() {
           background: var(--card);
           overflow-x: auto;
           position: sticky;
-          top: 60px;
+          top: var(--topbar-height); /* matches the real topbar at every breakpoint */
           z-index: 20;
           scrollbar-width: none;
           -ms-overflow-style: none;
@@ -1294,7 +1307,6 @@ export default function Clients() {
           .client-charts-grid   { grid-template-columns: 1fr; }
           .client-orders-stats  { grid-template-columns: 1fr 1fr; }
           .client-tab-content   { padding: 12px 10px; }
-          .client-tabs-bar      { top: 56px; }
         }
       `}</style>
     </div>
