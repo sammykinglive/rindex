@@ -39,7 +39,6 @@ function Modal({ title, onClose, onSubmit, form, setForm, loading, commodities, 
         .finally(() => { if (id === genReqRef.current) setGenLoading(false); });
     }, 250);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, form.date, form.commodity_id]);
 
   function handleCommodityChange(id) {
